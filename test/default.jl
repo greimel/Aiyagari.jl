@@ -36,7 +36,7 @@ z_MC = MarkovChain(z_prob, z_grid)
 u(c) = c > 0 ? log(c) : c * 1e5 - 1e3
 
 function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_mc, converged)
-  r, β, γ = 0.05, 0.9, 0.9
+  r, β, γ = 0.05, 0.95, 0.5
   a_min, a_max = extrema(a_grid)
   
   for (i_z, nt) in enumerate(z_mc.state_values)
@@ -84,17 +84,45 @@ exo_MC = MarkovChain(z_MC, κ_MC, (:z, :κ))
 exo_MC.state_values[1]
 
 ## Endogenous state
-a_grid = LinRange(-4.0, 4.0, 50)
+a_grid = LinRange(-10.0, 20.0, 300)
 
 @unpack value, policy, policies_full = solve_bellman(a_grid, exo_MC, (default=true, c=1.5), maxiter=400 )
 
 using StructArrays, Plots
 
 s = StructArray(policies_full)
+
+sum(s.default)
+
 plot(s.default)
 plot(s.c)
 
 using Plots
 plot(a_grid, value)
 plot(a_grid, policy)
+
+dist = stationary_distribution(exo_MC, a_grid, policy)
+dist = reshape(dist, size(value))
+
+statespace = DataFrame([(a=a, exo...) for exo in exo_MC.state_values for a in a_grid])
+
+statespace[!,:pmf] = vec(dist)
+statespace[!,:default] = vec(s.default)
+
+using StatsBase: Weights
+using StatsPlots
+
+default_df = by(statespace, [:z, :a]) do df
+  (default = mean(df.default, Weights(df.pmf)),)
+end
+
+@df default_df plot(:a, :default, group=:z)
+
+reshape(test, size(value))
+plot(a_grid, dist)
+
+using DataFrames
+DataFrame(exo_MC.state_values)
+
+sum(s.default .* dist, dims=
 
