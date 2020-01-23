@@ -36,7 +36,7 @@ z_MC = MarkovChain(z_prob, z_grid)
 u(c) = c > 0 ? log(c) : c * 1e5 - 1e3
 
 function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_mc, converged)
-  r, β, γ = 0.05, 0.9, 1.0
+  r, β, γ = 0.05, 0.9, 0.9
   a_min, a_max = extrema(a_grid)
   
   for (i_z, (z, κ)) in enumerate(z_mc.state_values)
@@ -55,19 +55,19 @@ function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, 
 
       res = optimize(a_next -> - obj(a_next), a_min, a_max)
       
-      a_next = Optim.minimizer(res)
-      c = a + z - κ - a_next/(1+r)
-      v = - Optim.minimum(res)
+      a_no_def = Optim.minimizer(res)
+      c_no_def = a + z - κ - a_no_def/(1+r)
+      v_no_def = - Optim.minimum(res)
       
       # default
       c_default = (1-γ) * z
       a_default = (a + γ * z - κ) * (1+r)
       v_default = u(c_default) + β * extrapolate(sitp_exp_value, -Inf)(a_default)
       
-      if v > v_default
-        policy[i_a, i_z] = a_next
-        policies_full[i_a, i_z]= (default = false, c = c) 
-        value_new[i_a, i_z]    = v
+      if v_no_def > v_default
+        policy[i_a, i_z] = a_no_def
+        policies_full[i_a, i_z]= (default = false, c = c_no_def) 
+        value_new[i_a, i_z]    = v_no_def
         converged[i_a, i_z]    = Optim.converged(res)
       else
         policy[i_a, i_z] = a_default
@@ -83,11 +83,11 @@ exo_MC = MarkovChain(z_MC, κ_MC)
 exo_MC.state_values[1]
 
 ## Endogenous state
-a_grid = LinRange(0.0, 4.0, 150)
+a_grid = LinRange(-4.0, 4.0, 50)
 
 @unpack value, policy, policies_full = solve_bellman(a_grid, exo_MC, (default=true, c=1.5), maxiter=400 )
 
-using StructArrays
+using StructArrays, Plots
 
 s = StructArray(policies_full)
 plot(s.default)
