@@ -3,14 +3,20 @@
 """
 function findneighbours(vector, point)
   i_next = searchsortedfirst(vector, point)
-
-  prev = vector[i_next-1]
-  next = vector[i_next]
-
-  Δ = next - prev
-  λ = (next - point) / Δ
   
-  (i_prev=i_next-1, i_next=i_next, λ=λ)
+  if i_next == 1
+    i_prev = 1
+    λ = 1.0
+  else
+    i_prev = i_next - 1
+    prev = vector[i_prev]
+    next = vector[i_next]
+
+    Δ = next - prev
+    λ = (next - point) / Δ
+  end
+
+  (i_prev=i_prev, i_next=i_next, λ=λ)
 end
 
 

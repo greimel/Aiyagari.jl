@@ -39,7 +39,8 @@ function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, 
   r, β, γ = 0.05, 0.9, 0.9
   a_min, a_max = extrema(a_grid)
   
-  for (i_z, (z, κ)) in enumerate(z_mc.state_values)
+  for (i_z, nt) in enumerate(z_mc.state_values)
+    @unpack z, κ = nt
     # Create interpolated expected value function
     exp_value = value_old * z_mc.p[i_z,:]
 
@@ -62,7 +63,7 @@ function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, 
       # default
       c_default = (1-γ) * z
       a_default = (a + γ * z - κ) * (1+r)
-      v_default = u(c_default) + β * extrapolate(sitp_exp_value, -Inf)(a_default)
+      v_default = u(c_default) + β * extrapolate(sitp_exp_value, Interpolations.Line())(a_default)
       
       if v_no_def > v_default
         policy[i_a, i_z] = a_no_def
@@ -79,7 +80,7 @@ function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, 
   end
 end
 
-exo_MC = MarkovChain(z_MC, κ_MC)
+exo_MC = MarkovChain(z_MC, κ_MC, (:z, :κ))
 exo_MC.state_values[1]
 
 ## Endogenous state
