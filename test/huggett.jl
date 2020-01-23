@@ -25,7 +25,10 @@ function Aiyagari.iterate_bellman!(value_new, value_old, policy, a_grid, z_mc, c
     
     for (i_a, a) in enumerate(a_grid) 
       
-      obj(a_next) = u(a + z - a_next/(1+r)) + β * sitp_exp_value(a_next)
+      obj = a_next -> begin
+        c = a + z - a_next/(1+r)
+        u(c) + β * sitp_exp_value(a_next)
+      end
 
       res = optimize(a_next -> - obj(a_next), a_min, a_max)
 

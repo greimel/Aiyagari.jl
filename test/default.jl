@@ -35,8 +35,8 @@ z_MC = MarkovChain(z_prob, z_grid)
 
 u(c) = c > 0 ? log(c) : c * 1e5 - 1e3
 
-function Aiyagari.iterate_bellman!(value_new, value_old, policy, a_grid, z_mc, converged)
-  r, β, γ = 0.05, 0.9, 0.9
+function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_mc, converged)
+  r, β, γ = 0.05, 0.9, 1.0
   a_min, a_max = extrema(a_grid)
   
   for (i_z, (z, κ)) in enumerate(z_mc.state_values)
@@ -55,6 +55,8 @@ function Aiyagari.iterate_bellman!(value_new, value_old, policy, a_grid, z_mc, c
 
       res = optimize(a_next -> - obj(a_next), a_min, a_max)
       
+      a_next = Optim.minimizer(res)
+      c = a + z - κ - a_next/(1+r)
       v = - Optim.minimum(res)
       
       # default
@@ -63,13 +65,15 @@ function Aiyagari.iterate_bellman!(value_new, value_old, policy, a_grid, z_mc, c
       v_default = u(c_default) + β * extrapolate(sitp_exp_value, -Inf)(a_default)
       
       if v > v_default
-        policy[i_a, i_z]    = Optim.minimizer(res)
-        value_new[i_a, i_z] = v
-        converged[i_a, i_z] = Optim.converged(res)
+        policy[i_a, i_z] = a_next
+        policies_full[i_a, i_z]= (default = false, c = c) 
+        value_new[i_a, i_z]    = v
+        converged[i_a, i_z]    = Optim.converged(res)
       else
-        policy[i_a, i_z]    = a_default
-        value_new[i_a, i_z] = v_default
-        converged[i_a, i_z] = Optim.converged(res)
+        policy[i_a, i_z] = a_default
+        policies_full[i_a, i_z]= (default = true, c = c_default) 
+        value_new[i_a, i_z]    = v_default
+        converged[i_a, i_z]    = Optim.converged(res)
       end
     end
   end
@@ -79,9 +83,15 @@ exo_MC = MarkovChain(z_MC, κ_MC)
 exo_MC.state_values[1]
 
 ## Endogenous state
-a_grid = LinRange(-4.0, 4.0, 50)
+a_grid = LinRange(0.0, 4.0, 150)
 
-@unpack value, policy = solve_bellman(a_grid, exo_MC)
+@unpack value, policy, policies_full = solve_bellman(a_grid, exo_MC, (default=true, c=1.5), maxiter=400 )
+
+using StructArrays
+
+s = StructArray(policies_full)
+plot(s.default)
+plot(s.c)
 
 using Plots
 plot(a_grid, value)
