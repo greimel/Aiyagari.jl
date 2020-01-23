@@ -1,0 +1,4 @@
+name = "Aiyagari"
+uuid = "7b0e4355-eafe-4ce3-ba71-9b57fde9d81c"
+authors = ["Fabian Greimel <fabgrei@gmail.com>"]
+version = "0.1.0"
