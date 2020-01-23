@@ -35,8 +35,10 @@ z_MC = MarkovChain(z_prob, z_grid)
 
 u(c) = c > 0 ? log(c) : c * 1e5 - 1e3
 
-function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_mc, converged)
-  r, β, γ = 0.05, 0.95, 0.5
+q(a,z,agg_state) = (1-agg_state.θ(a,z))/(1+agg_state.r)
+
+function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_mc, converged, agg_state)
+  β, γ = 0.95, 0.5
   a_min, a_max = extrema(a_grid)
   
   for (i_z, nt) in enumerate(z_mc.state_values)
@@ -50,19 +52,20 @@ function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, 
     for (i_a, a) in enumerate(a_grid) 
       
       obj = a_next -> begin
-        c = a + z - κ - a_next/(1+r)
+        c = a + z - κ - q(a_next,z,agg_state) * a_next
         u(c) + β * sitp_exp_value(a_next)
       end
 
       res = optimize(a_next -> - obj(a_next), a_min, a_max)
       
       a_no_def = Optim.minimizer(res)
-      c_no_def = a + z - κ - a_no_def/(1+r)
+      c_no_def = a + z - κ - a_no_def * q(a_no_def,z,agg_state)
       v_no_def = - Optim.minimum(res)
       
       # default
       c_default = (1-γ) * z
-      a_default = (a + γ * z - κ) * (1+r)
+      
+      a_default = (a + γ * z - κ) * (1+agg_state.r)
       v_default = u(c_default) + β * extrapolate(sitp_exp_value, Interpolations.Line())(a_default)
       
       if v_no_def > v_default
@@ -80,49 +83,79 @@ function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, 
   end
 end
 
+using StructArrays
+using StatsBase: Weights
+using DataFrames
+
+mutable struct AggStateNoFreshStart{T1, T2, T3}
+  r::T1
+  default_choice::T2
+  θ::T3 # default_probability
+end
+
+function AggStateNoFreshStart(r, a_grid::AbstractVector, exo_mc::MarkovChain)
+  size = (length(a_grid), length(exo_mc.state_values))
+  
+  default_choice = falses(size)
+  
+  AggStateNoFreshStart(r, default_choice, default_probabilities(a_grid, exo_mc))
+end
+
+function update_probabilities!(agg_state, a_grid, exo_mc, policies_full, dist)
+  agg_state.default_choice .=  default_choice(policies_full)
+  agg_state.θ = default_probabilities(a_grid, exo_mc, agg_state.default_choice, dist)
+end
+
+function default_choice(policies_full)
+  policies_SoA = StructArray(policies_full)
+  default_choice = policies_SoA.default
+end
+
+function default_probabilities(a_grid, exo_mc, default_choice, dist)
+  dist = reshape(dist, size(default_choice))
+    
+  statespace = DataFrame([(a=a, exo...) for exo in exo_MC.state_values for a in a_grid])
+
+  statespace[!,:pmf] = vec(dist)
+  statespace[!,:default] = vec(default_choice)
+
+  default_df = by(statespace, [:a, :z]) do df
+    (default = mean(df.default, Weights(df.pmf)),)
+  end
+  
+  default_df.default
+  
+  z_grid = unique(default_df.z)
+  out = reshape(default_df.default, (length(a_grid), length(z_grid)))
+  
+  itp = interpolate((a_grid, z_grid), out, (Gridded(Linear()), Gridded(Constant())))
+end
+
+function default_probabilities(a_grid, exo_mc)
+  size = (length(a_grid), length(exo_mc.state_values))
+  
+  default_probabilities(a_grid, exo_mc, falses(size), ones(size)/prod(size))
+end
+
+
 exo_MC = MarkovChain(z_MC, κ_MC, (:z, :κ))
 exo_MC.state_values[1]
 
 ## Endogenous state
 a_grid = LinRange(-10.0, 20.0, 300)
 
-@unpack value, policy, policies_full = solve_bellman(a_grid, exo_MC, (default=true, c=1.5), maxiter=400 )
+agg_state = AggStateNoFreshStart(0.05, a_grid, exo_MC)
 
-using StructArrays, Plots
+@unpack value, policy, policies_full = solve_bellman(a_grid, exo_MC, (default=true, c=1.5), agg_state, maxiter=400 )
+dist = stationary_distribution(exo_MC, a_grid, policy)
+update_probabilities!(agg_state, a_grid, exo_MC, policies_full, dist)
 
-s = StructArray(policies_full)
 
-sum(s.default)
+using StatsPlots
+plot(agg_state.default_choice)
 
-plot(s.default)
-plot(s.c)
-
-using Plots
 plot(a_grid, value)
 plot(a_grid, policy)
 
-dist = stationary_distribution(exo_MC, a_grid, policy)
-dist = reshape(dist, size(value))
-
-statespace = DataFrame([(a=a, exo...) for exo in exo_MC.state_values for a in a_grid])
-
-statespace[!,:pmf] = vec(dist)
-statespace[!,:default] = vec(s.default)
-
-using StatsBase: Weights
-using StatsPlots
-
-default_df = by(statespace, [:z, :a]) do df
-  (default = mean(df.default, Weights(df.pmf)),)
-end
 
 @df default_df plot(:a, :default, group=:z)
-
-reshape(test, size(value))
-plot(a_grid, dist)
-
-using DataFrames
-DataFrame(exo_MC.state_values)
-
-sum(s.default .* dist, dims=
-
