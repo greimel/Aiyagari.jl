@@ -11,7 +11,7 @@ function solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_M
       @info "converged after $i iterations, diff = $diff"
       break
     end
-    if i % 50 == 0
+    if i % 200 == 0
       @info "it: $i, diff=$diff"
     end
     if i == maxiter

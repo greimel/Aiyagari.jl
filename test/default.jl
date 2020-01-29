@@ -112,7 +112,6 @@ function default_choice(policies_full)
 end
 
 function default_probabilities(a_grid, exo_mc, default_choice, dist)
-  dist = reshape(dist, size(default_choice))
     
   statespace = DataFrame([(a=a, exo...) for exo in exo_MC.state_values for a in a_grid])
 
@@ -144,15 +143,88 @@ exo_MC.state_values[1]
 ## Endogenous state
 a_grid = LinRange(-10.0, 20.0, 300)
 
+## Finding an equilibrium
+
+# step 0: θ ≡ 0, r = r₀
+
+
+using LinearAlgebra: norm, dot
+
+
+
+
+function iterate_defaults(a_grid, exo_MC, agg_state; max_iter_Bellman=400) # solve for 0 profits of intermediary
+  # Solve given "interest schedule"
+  @unpack value, policy, policies_full = solve_bellman(a_grid, exo_MC, (default=true, c=1.5), agg_state, maxiter=max_iter_Bellman )
+  dist = stationary_distribution(exo_MC, a_grid, policy)
+
+  # Update interest schedule
+  update_probabilities!(agg_state, a_grid, exo_MC, policies_full, dist)
+  dist
+end
+
+function solve_defaults(a_grid, exo_MC, agg_state; max_iter_Bellman=400, max_iter=30)  
+  def_old = copy(agg_state.default_choice)
+  θ_old = [agg_state.θ(a,z) for (a,z) in Iterators.product(a_grid, z_grid)]
+  
+  for i in 1:max_iter
+    dist = iterate_defaults(a_grid, exo_MC, agg_state, max_iter_Bellman=max_iter_Bellman)
+  
+    def_new = agg_state.default_choice
+    θ_new = [agg_state.θ(a,z) for (a,z) in Iterators.product(a_grid, z_grid)]
+  
+    #norm(θ_new - θ_old, Inf)
+    
+    def_switch = sum(def_new .!= def_old)
+    
+    mass = sum(dist[def_new .!= def_old])
+    if def_switch/length(def_new) < 0.001 || mass < 1e-5
+      break
+    end
+    if i%1 == 0
+      @info "(#: $def_switch %: $(def_switch/length(def_new)), mass = $mass)"
+    end
+    
+    if i == max_iter
+      @warn "Default choices didn't converge (#: $def_switch %: $(def_switch/length(def_new)), mass = $mass)"
+    end
+    def_old .= def_new
+    θ_old .= θ_new
+  end
+end
+
 agg_state = AggStateNoFreshStart(0.05, a_grid, exo_MC)
 
-@unpack value, policy, policies_full = solve_bellman(a_grid, exo_MC, (default=true, c=1.5), agg_state, maxiter=400 )
-dist = stationary_distribution(exo_MC, a_grid, policy)
-update_probabilities!(agg_state, a_grid, exo_MC, policies_full, dist)
+solve_defaults(a_grid, exo_MC, agg_state)
 
+
+agg_state.default_choice
+
+begin
+  plt_θ = plot(a_grid, def_prob)
+  plt_dist = plot(a_grid, dist) 
+  display(plot(plt_θ, plt_dist))
+end
+
+## profits are zero automatically
+## asset markets still need to clear
+dist = stationary_distribution(exo_MC, a_grid, policy)
+
+excess_demand(agg_state, a_grid, dist) = dot(a_grid, sum(dist, dims=2))
+
+excess_demand(agg_state, a_grid, dist)
+  
+ζ(r, )
 
 using StatsPlots
+
+
+policies_SoA = StructArray(policies_full)
+
+plot(a_grid, policies_SoA.default)
+
 plot(agg_state.default_choice)
+
 
 plot(a_grid, value)
 plot(a_grid, policy)
