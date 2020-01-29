@@ -97,5 +97,7 @@ function stationary_distribution(z_mc, a_grid, policy)
   dist = real(eigvec[:,is[1]])
   
   dist ./= sum(dist)
+  
+  reshape(dist, size(policy))
 end
 
