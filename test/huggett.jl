@@ -12,8 +12,9 @@ z_MC = MarkovChain(z_prob, z_grid)
 
 u(c) = c > 0 ? log(c) : 10000 * c - 10000 * one(c)
 
-function Aiyagari.iterate_bellman!(value_new, value_old, policy, a_grid, z_mc, converged)
-  r, β = 0.05, 0.9
+function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_mc, converged, agg_state)
+  @unpack r = agg_state
+  β = 0.9
   a_min, a_max = extrema(a_grid)
   
   for (i_z, z) in enumerate(z_mc.state_values)
@@ -39,7 +40,20 @@ function Aiyagari.iterate_bellman!(value_new, value_old, policy, a_grid, z_mc, c
   end
 end
 
-@btime @unpack value, policy = solve_bellman(a_grid, z_MC)
+mutable struct HuggettAS{T1,T2} <: AggregateState
+  r::T1
+  dist::T2 # the distribution over idiosynchratic states
+end
+
+function HuggettAS(r, a_grid, z_MC)
+  dist_proto = zeros((length(a_grid), length(z_MC.state_values)))
+  HuggettAS(r, dist_proto)
+end
+
+agg_state = HuggettAS(0.05, a_grid, z_MC)
+
+#using BenchmarkTools
+@unpack value, policy = solve_bellman(a_grid, z_MC, (), agg_state)
 # 22 ms
 
 a_min, a_max = a_grid[[1;end]]
@@ -65,7 +79,7 @@ let value = value, policy=policy, z_mc = z_MC
   @btime Aiyagari.controlled_markov_chain!($I, $J, $V, $lin_ind, $z_mc, $a_grid, $policy)
 end
 
-@btime dist = stationary_distribution(z_MC, a_grid, policy)
+dist = stationary_distribution(z_MC, a_grid, policy)
 #926 μs
 
 using Plots
