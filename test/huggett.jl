@@ -22,7 +22,7 @@ function objective(choices, states, aggregate_state, 𝔼V, params)
   u(c) + β * 𝔼V(a_next)
 end
 
-function get_optimum(states, agg_state, 𝔼V, params, a_grid)
+function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid)
   a_min, a_max = extrema(a_grid)
 
   res = optimize(a_next -> - objective((a_next=a_next,), states, agg_state, 𝔼V, params), a_min, a_max)
@@ -35,26 +35,6 @@ function get_optimum(states, agg_state, 𝔼V, params, a_grid)
 
 end
 
-function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_mc, converged, agg_state, params)
-  
-  for (i_z, z) in enumerate(z_mc.state_values)
-    # Create interpolated expected value function
-    exp_value = value_old * z_mc.p[i_z,:]
-
-    itp_exp_value = interpolate(exp_value, BSpline(Cubic(Line(OnGrid()))))
-    𝔼V = scale(itp_exp_value, a_grid)
-    
-    for (i_a, a) in enumerate(a_grid) 
-      states = (a=a, z=z)
-
-      @unpack pol, val, conv = get_optimum(states, agg_state, 𝔼V, params, a_grid)
-
-      policy[i_a, i_z]    = pol 
-      value_new[i_a, i_z] = val 
-      converged[i_a, i_z] = conv 
-    end
-  end
-end
 
 include("../src/aggregate-state.jl")
 

@@ -1,4 +1,4 @@
-function iterate_bellman! end
+function get_optimum end
 
 function solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_MC, converged, aggregate_state, params; maxiter=100, tol = √eps())
   
@@ -41,3 +41,23 @@ function solve_bellman(a_grid, z_MC, proto_policy, proto_policy_full, aggregate_
   (value = value_new, policy = policy, policies_full=policies_full, converged=converged)
 end
 
+function iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_mc, converged, agg_state, params)
+  
+  for (i_z, z) in enumerate(z_mc.state_values)
+    # Create interpolated expected value function
+    exp_value = value_old * z_mc.p[i_z,:]
+
+    itp_exp_value = interpolate(exp_value, BSpline(Cubic(Line(OnGrid()))))
+    𝔼V = scale(itp_exp_value, a_grid)
+    
+    for (i_a, a) in enumerate(a_grid) 
+      states = (a=a, z=z)
+
+      @unpack pol, val, conv = get_optimum(states, agg_state, 𝔼V, params, a_grid)
+
+      policy[i_a, i_z]    = pol 
+      value_new[i_a, i_z] = val 
+      converged[i_a, i_z] = conv 
+    end
+  end
+end
