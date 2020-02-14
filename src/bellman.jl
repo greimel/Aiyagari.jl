@@ -26,17 +26,14 @@ function solve_bellman(a_grid, z_MC, proto_policy, proto_policy_full, aggregate_
   policy = fill(proto_policy, size(value_old))
   policies_full = fill(proto_policy_full, size(value_old))
   converged = trues(size(value_old))
-
-  @show policy[1]
-  @show policies_full[1]
   
   solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_MC, converged, aggregate_state, params; maxiter=maxiter, tol=tol)
   
   # checks
-  at_max = mean(policy .≈ a_grid[end])
-  at_min = mean(policy .≈ a_grid[1])
-  at_max > 0 && @warn "optimal policy is at upper bound $(100 * at_max) % of the time"
-  at_min > 0 && @warn "optimal policy is at lower bound $(100 * at_min) % of the time"
+  # at_max = mean(policy .≈ a_grid[end])
+  # at_min = mean(policy .≈ a_grid[1])
+  # at_max > 0 && @warn "optimal policy is at upper bound $(100 * at_max) % of the time"
+  # at_min > 0 && @warn "optimal policy is at lower bound $(100 * at_min) % of the time"
 
   all(converged) || @warn "optimization didn't converge at $(mean(converged) * 100)%"
 

@@ -1,3 +1,14 @@
+using Test, Aiyagari
+using Optim, QuantEcon, Parameters, Interpolations
+
+# Exogenous states (incomes)
+z_grid = [0.5; 1.0; 1.5]
+z_prob = [0.7 0.15 0.15;
+          0.2 0.6 0.2;
+          0.15 0.15 0.7]
+z_MC = MarkovChain(z_prob, z_grid)
+
+
 u(c; γ=γ) = c > 0 ? c^(1-γ) / (1-γ) : 10000 * c - 10000 * one(c)
 
 function u(c,h; ξ=0.8159, ρ=map(s -> (s-1)/s, 0.13), γ=2.0) # Housing share and Intra-temporal ES (0.13) from Garriga & Hedlund
@@ -82,9 +93,24 @@ function HousingAS(p, r, a_grid, z_MC)
   HousingAS(p, r, dist_proto)
 end
 
-agg_state = HousingAS(1.5, 0.05, a_grid, z_MC)
-param = (β = 0.9, θ = 0.7, δ = 0.0)
+a_grid = LinRange(0.01, 10, 40)
+agg_state = HousingAS(2.2, 0.01, a_grid, z_MC)
+param = (β = 0.7, θ = 0.9, δ = 0.2)
 
-#using BenchmarkTools
-@unpack value, policy = solve_bellman(a_grid, z_MC, [0.0, 0.0], (w_next=0.0, h_next=0.0), agg_state, param)
+#using BenchmarkTool
+@time @unpack value, policy, policies_full = solve_bellman(a_grid, z_MC, [0.0, 0.0], (w_next=0.0, h_next=0.0), agg_state, param)
 
+using Plots, StructArrays
+
+plot(value)
+policies_SoA = StructArray(policies_full)
+
+plot(a_grid, policies_SoA.w_next)
+plot(a_grid, policies_SoA.h_next)
+
+dist = stationary_distribution(z_MC, a_grid, policies_SoA.w_next)
+#926 μs
+
+#writedlm("test/matrices/huggett_dist.txt", dist)
+dist_test = readdlm("test/matrices/huggett_dist.txt")
+@test all(dist .== dist_test)
