@@ -23,10 +23,13 @@ end
 function solve_bellman(a_grid, z_MC, proto_policy, proto_policy_full, aggregate_state, params; maxiter=200, tol=√eps())
   value_old = zeros(length(a_grid), length(z_MC.state_values))
   value_new = zeros(size(value_old))
-  policy = fill(proto_policy_full, size(value_old))
+  policy = fill(proto_policy, size(value_old))
   policies_full = fill(proto_policy_full, size(value_old))
   converged = trues(size(value_old))
 
+  @show policy[1]
+  @show policies_full[1]
+  
   solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_MC, converged, aggregate_state, params; maxiter=maxiter, tol=tol)
   
   # checks
@@ -53,9 +56,10 @@ function iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z
     for (i_a, a) in enumerate(a_grid) 
       states = (a=a, z=z)
 
-      @unpack pol, val, conv = get_optimum(states, agg_state, 𝔼V, params, a_grid)
+      @unpack pol, pol_full, val, conv = get_optimum(states, agg_state, 𝔼V, params, a_grid)
 
       policy[i_a, i_z]    = pol 
+      policies_full[i_a, i_z] = pol_full
       value_new[i_a, i_z] = val 
       converged[i_a, i_z] = conv 
     end

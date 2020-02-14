@@ -31,7 +31,7 @@ function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid)
   val  = - Optim.minimum(res)
   conv = Optim.converged(res)
   
-  (pol=pol, val=val, conv=conv)
+  (pol=pol, pol_full=missing, val=val, conv=conv)
 
 end
 
@@ -52,7 +52,7 @@ agg_state = HuggettAS(0.05, a_grid, z_MC)
 param = (β = 0.9, )
   
 #using BenchmarkTools
-@unpack value, policy = solve_bellman(a_grid, z_MC, (), 0.0, agg_state, param)
+@unpack value, policy = solve_bellman(a_grid, z_MC, 0.0, missing, agg_state, param)
 # 22 ms 176 itr
 using DelimitedFiles
 #writedlm("test/matrices/huggett_value.txt", value)
