@@ -35,10 +35,7 @@ function get_optimum(states, agg_state, 𝔼V, params, a_grid)
 
 end
 
-function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_mc, converged, agg_state)
-
-  params = (β = 0.9, )
-  
+function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_mc, converged, agg_state, params)
   
   for (i_z, z) in enumerate(z_mc.state_values)
     # Create interpolated expected value function
@@ -72,9 +69,10 @@ function HuggettAS(r, a_grid, z_MC)
 end
 
 agg_state = HuggettAS(0.05, a_grid, z_MC)
-
+param = (β = 0.9, )
+  
 #using BenchmarkTools
-@unpack value, policy = solve_bellman(a_grid, z_MC, (), agg_state)
+@unpack value, policy = solve_bellman(a_grid, z_MC, (), 0.0, agg_state, param)
 # 22 ms 176 itr
 using DelimitedFiles
 #writedlm("test/matrices/huggett_value.txt", value)

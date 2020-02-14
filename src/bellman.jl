@@ -1,9 +1,9 @@
 function iterate_bellman! end
 
-function solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_MC, converged, aggregate_state; maxiter=100, tol = √eps())
+function solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_MC, converged, aggregate_state, params; maxiter=100, tol = √eps())
   
   for i in 1:maxiter
-    iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_MC, converged, aggregate_state)
+    iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_MC, converged, aggregate_state, params)
     diff = norm(value_old - value_new)
     value_old .= value_new
     
@@ -20,14 +20,14 @@ function solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_M
   end
 end
 
-function solve_bellman(a_grid, z_MC, proto_policy, aggregate_state; maxiter=200, tol=√eps())
+function solve_bellman(a_grid, z_MC, proto_policy, proto_policy_full, aggregate_state, params; maxiter=200, tol=√eps())
   value_old = zeros(length(a_grid), length(z_MC.state_values))
   value_new = zeros(size(value_old))
-  policy = zeros(size(value_old))
-  policies_full = fill(proto_policy, size(value_old))
+  policy = fill(proto_policy_full, size(value_old))
+  policies_full = fill(proto_policy_full, size(value_old))
   converged = trues(size(value_old))
 
-  solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_MC, converged, aggregate_state; maxiter=maxiter, tol=tol)
+  solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_MC, converged, aggregate_state, params; maxiter=maxiter, tol=tol)
   
   # checks
   at_max = mean(policy .≈ a_grid[end])
