@@ -51,7 +51,12 @@ function iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z
     exp_value = value_old * z_mc.p[i_z,:]
 
     itp_exp_value = interpolate(exp_value, BSpline(Cubic(Line(OnGrid()))))
-    𝔼V = scale(itp_exp_value, a_grid)
+
+    𝔼V = extrapolate(
+            scale(itp_exp_value, a_grid),
+            Interpolations.Line()
+            )
+            
     
     for (i_a, a) in enumerate(a_grid) 
       states = (a=a, z=z)
@@ -65,3 +70,4 @@ function iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z
     end
   end
 end
+
