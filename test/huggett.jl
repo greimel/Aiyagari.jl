@@ -12,26 +12,40 @@ z_MC = MarkovChain(z_prob, z_grid)
 
 u(c) = c > 0 ? log(c) : 10000 * c - 10000 * one(c)
 
-function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_mc, converged, agg_state)
-  @unpack r = agg_state
-  β = 0.9
+function objective(choices, states, aggregate_state, 𝔼V, params)
+  @unpack a_next = choices
+  @unpack a, z = states
+  @unpack r = aggregate_state
+  @unpack β = params
+  
+  c = a + z - a_next/(1+r)
+  u(c) + β * 𝔼V(a_next)
+end
+
+function get_optimum(states, agg_state, 𝔼V, params, a_grid)
   a_min, a_max = extrema(a_grid)
+
+  res = optimize(a_next -> - objective((a_next=a_next,), states, agg_state, 𝔼V, params), a_min, a_max)
+  
+  res
+end
+
+function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_mc, converged, agg_state)
+
+  params = (β = 0.9, )
+  
   
   for (i_z, z) in enumerate(z_mc.state_values)
     # Create interpolated expected value function
     exp_value = value_old * z_mc.p[i_z,:]
 
     itp_exp_value = interpolate(exp_value, BSpline(Cubic(Line(OnGrid()))))
-    sitp_exp_value = scale(itp_exp_value, a_grid)
+    𝔼V = scale(itp_exp_value, a_grid)
     
     for (i_a, a) in enumerate(a_grid) 
-      
-      obj = a_next -> begin
-        c = a + z - a_next/(1+r)
-        u(c) + β * sitp_exp_value(a_next)
-      end
+      states = (a=a, z=z)
 
-      res = optimize(a_next -> - obj(a_next), a_min, a_max)
+      res = get_optimum(states, agg_state, 𝔼V, params, a_grid)
 
       policy[i_a, i_z]    = Optim.minimizer(res)
       value_new[i_a, i_z] = - Optim.minimum(res)
