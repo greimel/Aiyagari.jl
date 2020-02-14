@@ -40,6 +40,8 @@ function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, 
   end
 end
 
+include("../src/aggregate-state.jl")
+
 mutable struct HuggettAS{T1,T2} <: AggregateState
   r::T1
   dist::T2 # the distribution over idiosynchratic states
@@ -55,6 +57,11 @@ agg_state = HuggettAS(0.05, a_grid, z_MC)
 #using BenchmarkTools
 @unpack value, policy = solve_bellman(a_grid, z_MC, (), agg_state)
 # 22 ms
+using DelimitedFiles
+#writedlm("test/matrices/huggett_value.txt", value)
+value_test = readdlm("test/matrices/huggett_value.txt")
+
+@test all(value .== value_test)
 
 a_min, a_max = a_grid[[1;end]]
 @assert all(a_min .< policy .< a_max)
@@ -81,6 +88,10 @@ end
 
 dist = stationary_distribution(z_MC, a_grid, policy)
 #926 μs
+
+#writedlm("test/matrices/huggett_dist.txt", dist)
+dist_test = readdlm("test/matrices/huggett_dist.txt")
+@test all(dist .== dist_test)
 
 using Plots
 plot(a_grid, reshape(dist, size(value)))
