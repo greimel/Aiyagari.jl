@@ -27,7 +27,12 @@ function get_optimum(states, agg_state, 𝔼V, params, a_grid)
 
   res = optimize(a_next -> - objective((a_next=a_next,), states, agg_state, 𝔼V, params), a_min, a_max)
   
-  res
+  pol  = Optim.minimizer(res)
+  val  = - Optim.minimum(res)
+  conv = Optim.converged(res)
+  
+  (pol=pol, val=val, conv=conv)
+
 end
 
 function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_mc, converged, agg_state)
@@ -45,11 +50,11 @@ function Aiyagari.iterate_bellman!(value_new, value_old, policy, policies_full, 
     for (i_a, a) in enumerate(a_grid) 
       states = (a=a, z=z)
 
-      res = get_optimum(states, agg_state, 𝔼V, params, a_grid)
+      @unpack pol, val, conv = get_optimum(states, agg_state, 𝔼V, params, a_grid)
 
-      policy[i_a, i_z]    = Optim.minimizer(res)
-      value_new[i_a, i_z] = - Optim.minimum(res)
-      converged[i_a, i_z] = Optim.converged(res)
+      policy[i_a, i_z]    = pol 
+      value_new[i_a, i_z] = val 
+      converged[i_a, i_z] = conv 
     end
   end
 end
@@ -70,7 +75,7 @@ agg_state = HuggettAS(0.05, a_grid, z_MC)
 
 #using BenchmarkTools
 @unpack value, policy = solve_bellman(a_grid, z_MC, (), agg_state)
-# 22 ms
+# 22 ms 176 itr
 using DelimitedFiles
 #writedlm("test/matrices/huggett_value.txt", value)
 value_test = readdlm("test/matrices/huggett_value.txt")
