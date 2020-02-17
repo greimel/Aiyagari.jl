@@ -35,9 +35,6 @@ function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid)
 
 end
 
-
-include("../src/aggregate-state.jl")
-
 mutable struct HuggettAS{T1,T2} <: AggregateState
   r::T1
   dist::T2 # the distribution over idiosynchratic states
@@ -52,7 +49,7 @@ agg_state = HuggettAS(0.05, a_grid, z_MC)
 param = (β = 0.9, )
   
 #using BenchmarkTools
-@unpack value, policy = solve_bellman(a_grid, z_MC, 0.0, missing, agg_state, param)
+@unpack value, policy = solve_bellman(a_grid, z_MC, agg_state, param)
 # 22 ms 176 itr
 using DelimitedFiles
 #writedlm("test/matrices/huggett_value.txt", value)
