@@ -7,27 +7,68 @@ end
 
 V(w_next) = log(w_next)
 
-using JuMP
-using Ipopt
-
-model = Model()
-set_optimizer(model, Ipopt.Optimizer)
-
-register(model, :u, 2, u, autodiff=true)
-register(model, :V, 1, V, autodiff=true)
 y, w, r, p = 1.5, 0.5, 0.02, 2.0
 δ, ω, β = 0.2, 0.9, 0.8
 
-@variable(model, c >= eps())
-@variable(model, h >= eps())
-@variable(model, w_next >= eps())
-@variable(model, m)
+using JuMP
+using Ipopt
 
-@NLobjective(model, Max, u(c,h) + β * V(w_next) )
-@constraint(model, w_next == w + y - c - p * h * (r + δ))
-@constraint(model, (1+r) * m <= p * h * (1-δ) * ω)
+model0 = Model()
+set_optimizer(model0, Ipopt.Optimizer)
 
-@time optimize!(model)
+register(model0, :u, 2, u, autodiff=true)
+register(model0, :V, 1, V, autodiff=true)
+
+@variable(model0, c >= eps())
+@variable(model0, h >= eps())
+@constraint(model0, (1+r) * p * h + c - y - w <= p * h * (1-δ) * ω)
+
+@NLobjective(model0, Max, u(c,h) + β * V(w + y - c - p * h * (r + δ)) )
+
+@btime optimize!(model0) # 10 ms (m)
+
+value(c)
+value(h)
+
+model1 = Model()
+set_optimizer(model1, Ipopt.Optimizer)
+
+register(model1, :u, 2, u, autodiff=true)
+register(model1, :V, 1, V, autodiff=true)
+
+@variable(model1, c >= eps())
+@variable(model1, h >= eps())
+
+@variable(model1, w_next >= eps())
+@variable(model1, m)
+@constraint(model1, w_next == w + y - c - p * h * (r + δ))
+@constraint(model1, m == p * h + c - y - w)
+@constraint(model1, (1+r) * m <= p * h * (1-δ) * ω)
+@NLobjective(model1, Max, u(c,h) + β * V(w_next) )
+
+@btime optimize!(model1) # 24 ms (btime)
+
+model2 = Model()
+set_optimizer(model2, Ipopt.Optimizer)
+
+register(model2, :u, 2, u, autodiff=true)
+register(model2, :V, 1, V, autodiff=true)
+
+@variable(model2, c >= eps())
+@variable(model2, h >= eps())
+
+w_next = @NLexpression(model2, w + y - c - p * h * (r + δ))
+m = @expression(model2, p * h + c - y - w)
+@constraint(model2, (1+r) * m <= p * h * (1-δ) * ω)
+@NLobjective(model2, Max, u(c,h) + β * V(w_next) )
+
+@btime optimize!(model2) # 11 ms (btime)
+
+value(c)
+value(h)
+
+using BenchmarkTools
+@btime optimize!(model) # 11 ms (m)
 
 termination_status(model)
 objective_value(model)
