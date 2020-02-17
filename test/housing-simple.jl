@@ -12,7 +12,7 @@ z_MC = MarkovChain(z_prob, z_grid)
 
 u(c; γ=γ) = c > 0 ? c^(1-γ) / (1-γ) : 10000 * c - 10000 * one(c)
 
-function u(c,h; ξ=0.8159, ρ=map(s -> (s-1)/s, 0.13), γ=2.0) # Housing share and Intra-temporal ES (0.13) from Garriga & Hedlund
+@inline function u(c,h; ξ=0.8159, ρ=map(s -> (s-1)/s, 0.13), γ=2.0) # Housing share and Intra-temporal ES (0.13) from Garriga & Hedlund
   C = (ξ * h^ρ + (1-ξ) * c^ρ)^(1/ρ)
   u(C, γ=γ)
 end
@@ -45,16 +45,30 @@ function get_back_policies(transf_action, plain_state, prices, tech)
     (w_next=w_next, h_next=h_next)
 end
 
-function obj(plain_action, plain_state, prices, tech, value_itp)
-    @unpack h_next, w_next = plain_action
-    @unpack y, w = plain_state
-    @unpack p, r = prices
+function all_policies(plain_action, plain_state, prices, tech)
+  @unpack h_next, w_next = plain_action
+  @unpack y, w = plain_state
+  @unpack p, r = prices
     @unpack θ, δ, β = tech
+    
+  ϵ = eps(typeof(h_next))
 
-    h_next = h_next < eps() ? eps() : h_next
-    m_next = (1-δ) * p * h_next - w_next
-    c = w + y + m_next / (1+r) - p * h_next
-    c > 0 ? u(c, h_next) + β * value_itp(w_next) : - 10000 + 10000 * c
+  h_next = h_next < ϵ ? ϵ : h_next
+  m_next = (1-δ) * p * h_next - w_next
+  c = w + y + m_next / (1+r) - p * h_next
+  
+  (h_next=h_next, w_next=w_next, m_next=m_next, c=c)
+  #(h_next=h_next, c=c)
+end
+
+function obj(plain_action, plain_state, prices, tech, value_itp)
+    @unpack w_next = plain_action
+    @unpack β = tech
+
+    @unpack h_next, c = all_policies(plain_action, plain_state, prices, tech)
+    
+    c > 0 ? u(c, h_next) + β * value_itp(w_next) : - 10_000 + 10_000 * c
+    #u(c, h_next) + β * value_itp(w_next)
 end
 
 function obj_bounded(α₁, α₂, plain_state, prices, tech, value_itp)
@@ -78,7 +92,9 @@ function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid)
   transf_action = (α₁=α₁, α₂=α₂)
   plain_action =  get_back_policies(transf_action, plain_state, agg_state, params)
   
-  (pol=collect(plain_action), pol_full=plain_action, val=val, conv=conv)
+  other_actions = all_policies(plain_action, plain_state, agg_state, params)
+      
+  (pol=collect(plain_action), pol_full=other_actions, val=val, conv=conv)
   
 
 end
@@ -101,6 +117,8 @@ param = (β = 0.7, θ = 0.9, δ = 0.2)
 #using BenchmarkTool
 @time @unpack value, policy, policies_full = solve_bellman(a_grid, z_MC, agg_state, param)
 # 3.9 s 56 itr (n=40)
+# 5.7 s 56 itr (n=40)
+
 using DelimitedFiles
 value_test = readdlm("test/matrices/housing_simple_value.txt")
 #writedlm("test/matrices/housing_simple_value.txt", value)
