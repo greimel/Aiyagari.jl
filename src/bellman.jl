@@ -20,11 +20,14 @@ function solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_M
   end
 end
 
-function solve_bellman(a_grid, z_MC, proto_policy, proto_policy_full, aggregate_state, params; maxiter=200, tol=√eps())
+function solve_bellman(a_grid, z_MC, aggregate_state, params; maxiter=200, tol=√eps())
   value_old = zeros(length(a_grid), length(z_MC.state_values))
   value_new = zeros(size(value_old))
-  policy = fill(proto_policy, size(value_old))
-  policies_full = fill(proto_policy_full, size(value_old))
+  
+  @unpack proto_pol, proto_pol_full = proto_policy(a_grid, z_MC, value_new, aggregate_state, params)
+  
+  policy = fill(proto_pol, size(value_old))
+  policies_full = fill(proto_pol_full, size(value_old))
   converged = trues(size(value_old))
   
   solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_MC, converged, aggregate_state, params; maxiter=maxiter, tol=tol)
@@ -41,19 +44,36 @@ function solve_bellman(a_grid, z_MC, proto_policy, proto_policy_full, aggregate_
   (value = value_new, policy = policy, policies_full=policies_full, converged=converged)
 end
 
+function proto_policy(a_grid, z_MC, value, agg_state, params)
+  
+  states = (a=a_grid[1], z=z_MC.state_values[1])
+  𝔼V = expected_value2(value, z_MC.p[1,:], BSpline(Linear()), a_grid)
+  @unpack pol, pol_full = get_optimum(states, agg_state, 𝔼V, params, a_grid)
+        
+  (proto_pol=pol, proto_pol_full=pol_full)
+end
+
+
+function expected_value2(value, π, itp_scheme, a_grid)
+  #itp_scheme = BSpline(Cubic(Line(OnGrid())))
+  #itp_scheme = BSpline(Linear())
+
+  exp_value = value * π
+    
+  itp_exp_value = interpolate(exp_value, itp_scheme)
+
+  𝔼V = extrapolate(
+          scale(itp_exp_value, a_grid),
+          Interpolations.Line()
+          )
+end
+        
 function iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_mc, converged, agg_state, params)
   
   for (i_z, z) in enumerate(z_mc.state_values)
     # Create interpolated expected value function
-    exp_value = value_old * z_mc.p[i_z,:]
-
-    itp_exp_value = interpolate(exp_value, BSpline(Cubic(Line(OnGrid()))))
-
-    𝔼V = extrapolate(
-            scale(itp_exp_value, a_grid),
-            Interpolations.Line()
-            )
-            
+    #𝔼V = expected_value2(value_old, z_mc.p[i_z,:], BSpline(Linear()), a_grid)
+    𝔼V = expected_value2(value_old, z_mc.p[i_z,:],  BSpline(Cubic(Line(OnGrid()))), a_grid)
     
     for (i_a, a) in enumerate(a_grid) 
       states = (a=a, z=z)
