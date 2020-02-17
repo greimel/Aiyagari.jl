@@ -13,8 +13,12 @@ z_MC = MarkovChain(z_prob, z_grid)
 u(c; γ=γ) = c > 0 ? c^(1-γ) / (1-γ) : 10000 * c - 10000 * one(c)
 
 @inline function u(c,h; ξ=0.8159, ρ=map(s -> (s-1)/s, 0.13), γ=2.0) # Housing share and Intra-temporal ES (0.13) from Garriga & Hedlund
-  C = (ξ * h^ρ + (1-ξ) * c^ρ)^(1/ρ)
-  u(C, γ=γ)
+  if c > 0 && h > 0
+    C = (ξ * h^ρ + (1-ξ) * c^ρ)^(1/ρ)
+    u(C, γ=γ)
+  else c > 0
+    u(min(c,h), γ=γ)
+  end  
 end
 
 function transform_policies(plain_action, plain_state, prices, tech)
@@ -49,8 +53,8 @@ function all_policies(plain_action, plain_state, prices, tech)
   @unpack h_next, w_next = plain_action
   @unpack y, w = plain_state
   @unpack p, r = prices
-    @unpack θ, δ, β = tech
-    
+  @unpack θ, δ, β = tech
+
   ϵ = eps(typeof(h_next))
 
   h_next = h_next < ϵ ? ϵ : h_next
@@ -67,8 +71,8 @@ function obj(plain_action, plain_state, prices, tech, value_itp)
 
     @unpack h_next, c = all_policies(plain_action, plain_state, prices, tech)
     
-    c > 0 ? u(c, h_next) + β * value_itp(w_next) : - 10_000 + 10_000 * c
-    #u(c, h_next) + β * value_itp(w_next)
+    #c > 0 ? u(c, h_next) + β * value_itp(w_next) : - 10_000 + 10_000 * c
+    u(c, h_next) + β * value_itp(w_next)
 end
 
 function obj_bounded(α₁, α₂, plain_state, prices, tech, value_itp)
