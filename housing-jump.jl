@@ -7,65 +7,75 @@ end
 
 V(w_next) = log(w_next)
 
-y, w, r, p = 1.5, 0.5, 0.02, 2.0
-δ, ω, β = 0.2, 0.9, 0.8
+prices = (r = 0.02, p = 2.0)
+parameters = (δ = 0.2, ω = 0.9, β = 0.8)
 
 using JuMP
 using Ipopt
+using Parameters
 
-model0 = Model()
-set_optimizer(model0, Ipopt.Optimizer)
+function my_model(state, prices, parameters)
+  @unpack r, p = prices
+  #@unpack w, y = state
+  @unpack δ, β, ω = parameters
 
-register(model0, :u, 2, u, autodiff=true)
-register(model0, :V, 1, V, autodiff=true)
+  model = Model()
+  set_optimizer(model, Ipopt.Optimizer)
 
-@variable(model0, c >= eps())
-@variable(model0, h >= eps())
-@constraint(model0, (1+r) * p * h + c - y - w <= p * h * (1-δ) * ω)
+  register(model, :u, 2, u, autodiff=true)
+  register(model, :V, 1, V, autodiff=true)
 
-@NLobjective(model0, Max, u(c,h) + β * V(w + y - c - p * h * (r + δ)) )
+  @variable(model, c >= eps())
+  @variable(model, h >= eps())  
 
-@btime optimize!(model0) # 10 ms (m)
+  @NLparameter(model, w == state.w)
+  @NLparameter(model, y == state.y)
+  
+  w_next = @NLexpression(model, w + y - c - p * h * (r + δ))
+  m = @NLexpression(model, p * h + c - y - w)
+  @NLconstraint(model, (1+r) * m <= p * h * (1-δ) * ω)
+  @NLobjective(model, Max, u(c,h) + β * V(w_next) )
+  
+  model, w, y
+end
 
-value(c)
-value(h)
 
-model1 = Model()
-set_optimizer(model1, Ipopt.Optimizer)
+function my_solve(model, w, y, state, prices, parameters; init=false)
+  if init
+    model, w, y = my_model(state, prices, parameters)
+  else
+    set_value(w, state.w)
+    set_value(y, state.y)
+  end
+  
+  optimize!(model)
+    
+  (c=value(model[:c]), h=value(model[:h]))
+end
 
-register(model1, :u, 2, u, autodiff=true)
-register(model1, :V, 1, V, autodiff=true)
+state = state1
+state1 = (y = 1.5, w = 0.5)
+state2 = (y = 1.5, w = 0.7)
+state3 = (y = 1.5, w = 0.9)
 
-@variable(model1, c >= eps())
-@variable(model1, h >= eps())
+using BenchmarkTools
+mod, w, y = my_model(state1, prices, parameters)
+@btime begin
+  sol1 = my_solve(mod, y, y, state1, prices, parameters, init=true)
+  sol2 = my_solve(mod, y, y, state2, prices, parameters, init=true)
+  sol3 = my_solve(mod, y, y, state3, prices, parameters, init=true)
+end # 37 ms
 
-@variable(model1, w_next >= eps())
-@variable(model1, m)
-@constraint(model1, w_next == w + y - c - p * h * (r + δ))
-@constraint(model1, m == p * h + c - y - w)
-@constraint(model1, (1+r) * m <= p * h * (1-δ) * ω)
-@NLobjective(model1, Max, u(c,h) + β * V(w_next) )
+@btime begin
+  model1, w, y = my_model(state1, prices, parameters)
 
-@btime optimize!(model1) # 24 ms (btime)
+  sol1 = my_solve(model1, w, y, state1, prices, parameters)
+  sol2 = my_solve(model1, w, y, state2, prices, parameters)
+  sol3 = my_solve(model1, w, y, state3, prices, parameters)
+end # 39 ms
 
-model2 = Model()
-set_optimizer(model2, Ipopt.Optimizer)
 
-register(model2, :u, 2, u, autodiff=true)
-register(model2, :V, 1, V, autodiff=true)
 
-@variable(model2, c >= eps())
-@variable(model2, h >= eps())
-
-w_next = @NLexpression(model2, w + y - c - p * h * (r + δ))
-m = @expression(model2, p * h + c - y - w)
-@constraint(model2, (1+r) * m <= p * h * (1-δ) * ω)
-@NLobjective(model2, Max, u(c,h) + β * V(w_next) )
-
-@btime optimize!(model2) # 11 ms (btime)
-
-value(c)
-value(h)
 
 using BenchmarkTools
 @btime optimize!(model) # 11 ms (m)
