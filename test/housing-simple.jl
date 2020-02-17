@@ -114,9 +114,9 @@ function HousingAS(p, r, a_grid, z_MC)
   HousingAS(p, r, dist_proto)
 end
 
-a_grid = LinRange(0.01, 10, 40)
-agg_state = HousingAS(2.2, 0.01, a_grid, z_MC)
-param = (β = 0.7, θ = 0.9, δ = 0.2)
+a_grid = LinRange(0.0, 0.5, 40)
+agg_state = HousingAS(0.02, 2.2, a_grid, z_MC)
+param = (β = 0.7, θ = 0.9, δ = 0.1)
 
 #using BenchmarkTool
 @time @unpack value, policy, policies_full = solve_bellman(a_grid, z_MC, agg_state, param)
@@ -124,8 +124,8 @@ param = (β = 0.7, θ = 0.9, δ = 0.2)
 # 5.7 s 56 itr (n=40)
 
 using DelimitedFiles
-value_test = readdlm("test/matrices/housing_simple_value.txt")
 #writedlm("test/matrices/housing_simple_value.txt", value)
+value_test = readdlm("test/matrices/housing_simple_value.txt")
 
 @test all(value .== value_test)
 
@@ -135,11 +135,19 @@ using Plots, StructArrays
 plot(value)
 policies_SoA = StructArray(policies_full)
 
-plot(a_grid, policies_SoA.w_next)
-plot(a_grid, policies_SoA.h_next)
+scatter(a_grid, policies_SoA.w_next)
+scatter(a_grid, policies_SoA.h_next)
+scatter(a_grid, policies_SoA.m_next)
+scatter(a_grid, policies_SoA.c)
+
 
 dist = stationary_distribution(z_MC, a_grid, policies_SoA.w_next)
+
+using StatsBase
+mean(vec(policies_SoA.m_next), Weights(vec(dist)))
+mean(vec(policies_SoA.h_next), Weights(vec(dist)))
 #926 μs
+plot(a_grid, dist)
 
 #writedlm("test/matrices/huggett_dist.txt", dist)
 dist_test = readdlm("test/matrices/huggett_dist.txt")
