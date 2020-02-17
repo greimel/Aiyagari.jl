@@ -99,6 +99,13 @@ param = (β = 0.7, θ = 0.9, δ = 0.2)
 
 #using BenchmarkTool
 @time @unpack value, policy, policies_full = solve_bellman(a_grid, z_MC, [0.0, 0.0], (w_next=0.0, h_next=0.0), agg_state, param)
+# 11.7 s 56 itr (n=40)
+using DelimitedFiles
+#writedlm("test/matrices/housing_simple_value.txt", value)
+value_test = readdlm("test/matrices/housing_simple_value.txt")
+
+@test all(value .== value_test)
+
 
 using Plots, StructArrays
 
