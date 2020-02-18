@@ -41,7 +41,7 @@ function solve_bellman(a_grid, z_MC, aggregate_state, params; maxiter=200, tol=â
   all(converged) || @warn "optimization didn't converge at $(mean(converged) * 100)%"
 
   
-  (val = value_new, policy = policy, policies_full=policies_full, converged=converged)
+  (val = value_new, policy = policy, policies_full=StructArray(policies_full), converged=converged)
 end
 
 function proto_policy(a_grid, z_MC, value, agg_state, params)

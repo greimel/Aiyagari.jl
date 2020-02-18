@@ -47,24 +47,21 @@ value_test = readdlm("test/matrices/housing_simple_value.txt")
 @test all(value .== value_test)
 
 
-using Plots, StructArrays
 
 plot(val)
-policies_SoA = StructArray(policies_full)
 
-scatter(a_grid, policies_SoA.w_next)
-scatter(a_grid, policies_SoA.h_next)
-scatter(a_grid, policies_SoA.m_next)
-scatter(a_grid, policies_SoA.c)
+scatter(a_grid, policies_full.w_next)
+scatter(a_grid, policies_full.h)
+scatter(a_grid, policies_full.m)
+scatter(a_grid, policies_full.c)
 
-policies_SoA.ret
-all(policies_SoA.conv)
+all(policies_full.conv)
 
-dist = stationary_distribution(z_MC, a_grid, policies_SoA.w_next)
+dist = stationary_distribution(z_MC, a_grid, policies_full.w_next)
 
 using StatsBase
-mean(vec(policies_SoA.m_next), Weights(vec(dist)))
-mean(vec(policies_SoA.h_next), Weights(vec(dist)))
+mean(vec(policies_full.m), Weights(vec(dist)))
+mean(vec(policies_full.h), Weights(vec(dist)))
 #926 μs
 plot(a_grid, dist)
 

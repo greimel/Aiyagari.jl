@@ -7,6 +7,7 @@ using Parameters
 using LinearAlgebra: norm
 using SparseArrays: sparse
 using Arpack: eigs
+using StructArrays
 
 include("Expectations.jl")
 using .Expectations
