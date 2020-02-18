@@ -1,6 +1,6 @@
 using Revise
 using Test, Aiyagari
-using JuMP, Ipopt
+using JuMP, Ipopt, NLopt
 using QuantEcon, Parameters, Interpolations
 
 # Exogenous states (incomes)
@@ -21,7 +21,11 @@ function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid)
   @unpack p, r = agg_state
   @unpack β, θ, δ = params
   
-  model = Model(with_optimizer(Ipopt.Optimizer, print_level=0))
+  model = Model()
+  set_optimizer(model, NLopt.OpNLoptSolver(algorithm=:LD_MMA))
+  
+  MOI.set(model, MOI.RawParameter("print_level"), 0)
+  #model = Model(with_optimizer(Ipopt.Optimizer, print_level=0))
 
   register(model, :u, 2, u, autodiff=true)
   register(model, :𝔼V, 1, w -> 𝔼V(w), autodiff=true)
@@ -53,6 +57,8 @@ function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid)
 
 end
 
+# constrained optimization is provided in Optim!
+#https://julianlsolvers.github.io/Optim.jl/stable/#examples/generated/ipnewton_basics/#nonlinear-constrained-optimization
 mutable struct HousingAS{T1,T2,T3} <: AggregateState
   r::T1
   p::T2
