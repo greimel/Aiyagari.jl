@@ -6,7 +6,7 @@ function a_next(c, h, states, agg_state, 𝔼V, params)
   a = states.a
   y = states.z
   
-  a_next = (1+r) * a + y - c - ρ * h
+  a_next = (1+r) * (a + y - c - ρ * h)
 end
 
 function objective0(c, h, states, agg_state, 𝔼V, params)
@@ -63,12 +63,12 @@ function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid)
 
   val = max_f
   c, h = max_x
-  a_ = a_next(c, h, states, agg_state, 𝔼V, params)
+  w_ = a_next(c, h, states, agg_state, 𝔼V, params)
   
   conv = ret in [:FTOL_REACHED, :XTOL_REACHED, :SUCCESS, :LOCALLY_SOLVED]
   
-  pol_full = (c=c, h=h, a_next=a_, ret=ret, conv=conv, count= opt.numevals)
-  pol = pol_full.a_next, pol_full.h                    
+  pol_full = (c=c, h=h, w_next=w_, ret=ret, conv=conv, count= opt.numevals)
+  pol = pol_full.w_next, pol_full.h                    
       
   (pol=pol, pol_full=pol_full, val=val, conv=all(conv))
 end
