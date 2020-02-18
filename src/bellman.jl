@@ -2,19 +2,23 @@ function get_optimum end
 
 function solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_MC, converged, aggregate_state, params; maxiter=100, tol = √eps())
   
+  prog = ProgressThresh(tol, "Solving Bellman equation")
   for i in 1:maxiter
     iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_MC, converged, aggregate_state, params)
     diff = norm(value_old - value_new)
+    ProgressMeter.update!(prog, diff)
     value_old .= value_new
     
     if diff < tol
+      println("\n"^2)
       @info "converged after $i iterations, diff = $diff"
       break
     end
     if i % 200 == 0
-      @info "it: $i, diff=$diff"
+  #    @info "it: $i, diff=$diff"
     end
     if i == maxiter
+      print("\n"^2)
       @warn "reached $maxiter, diff= $diff"
     end
   end
@@ -69,7 +73,8 @@ function expected_value2(value, π, itp_scheme, a_grid)
 end
         
 function iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_mc, converged, agg_state, params)
-  
+  n = length(value_new)
+  prog = Progress(n, desc="Iterating", offset=1, dt=1)
   for (i_z, z) in enumerate(z_mc.state_values)
     # Create interpolated expected value function
     #𝔼V = expected_value2(value_old, z_mc.p[i_z,:], BSpline(Linear()), a_grid)
@@ -77,7 +82,7 @@ function iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z
     
     for (i_a, a) in enumerate(a_grid) 
       states = (a=a, z=z)
-
+      ProgressMeter.next!(prog)
       @unpack pol, pol_full, val, conv = get_optimum(states, agg_state, 𝔼V, params, a_grid)
 
       policy[i_a, i_z]    = pol 

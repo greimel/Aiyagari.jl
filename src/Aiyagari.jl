@@ -8,6 +8,7 @@ using LinearAlgebra: norm
 using SparseArrays: sparse
 using Arpack: eigs
 using StructArrays
+using ProgressMeter
 
 include("Expectations.jl")
 using .Expectations
