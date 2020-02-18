@@ -36,13 +36,14 @@ function my_model(state, prices, parameters)
   @NLconstraint(model, (1+r) * m <= p * h * (1-δ) * ω)
   @NLobjective(model, Max, u(c,h) + β * V(w_next) )
   
-  model, w, y
+
+  model, w, y, w_next
 end
 
 
-function my_solve(model, w, y, state, prices, parameters; init=false)
+function my_solve(model, w, y, w_next, state, prices, parameters; init=false)
   if init
-    model, w, y = my_model(state, prices, parameters)
+    model, w, y, w_next = my_model(state, prices, parameters)
   else
     set_value(w, state.w)
     set_value(y, state.y)
@@ -50,7 +51,7 @@ function my_solve(model, w, y, state, prices, parameters; init=false)
   
   optimize!(model)
     
-  (c=value(model[:c]), h=value(model[:h]))
+  (c=value(model[:c]), h=value(model[:h]), w_next=value(w_next))
 end
 
 state = state1
@@ -59,11 +60,11 @@ state2 = (y = 1.5, w = 0.7)
 state3 = (y = 1.5, w = 0.9)
 
 using BenchmarkTools
-mod, w, y = my_model(state1, prices, parameters)
-@btime begin
-  sol1 = my_solve(mod, y, y, state1, prices, parameters, init=true)
-  sol2 = my_solve(mod, y, y, state2, prices, parameters, init=true)
-  sol3 = my_solve(mod, y, y, state3, prices, parameters, init=true)
+mod, w, y, w_next = my_model(state1, prices, parameters)
+@time begin
+  sol1 = my_solve(mod, w, y, w_next, state1, prices, parameters, init=true)
+  sol2 = my_solve(mod, w, y, w_next, state2, prices, parameters, init=true)
+  sol3 = my_solve(mod, w, y, w_next, state3, prices, parameters, init=true)
 end # 37 ms
 
 @btime begin
