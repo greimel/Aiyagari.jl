@@ -10,12 +10,7 @@ function solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_M
     value_old .= value_new
     
     if diff < tol
-      println("\n"^2)
-      @info "converged after $i iterations, diff = $diff"
       break
-    end
-    if i % 200 == 0
-  #    @info "it: $i, diff=$diff"
     end
     if i == maxiter
       print("\n"^2)
@@ -24,7 +19,7 @@ function solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_M
   end
 end
 
-function solve_bellman(a_grid, z_MC, aggregate_state, params; maxiter=200, tol=√eps())
+function solve_bellman(a_grid, z_MC, aggregate_state, params; maxiter=200, tol=eps()^0.4)
   value_old = zeros(length(a_grid), length(z_MC.state_values))
   value_new = zeros(size(value_old))
   
