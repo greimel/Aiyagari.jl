@@ -33,7 +33,7 @@ agg_state = HousingAS(0.01, 2.2, a_grid, z_MC)
 param = (β = 0.7, θ = 0.9, δ = 0.1)
 
 include("housing-simple-nlopt.jl")
-include("housing-simple-jump.jl")
+#include("housing-simple-jump.jl")
 
 @time @unpack val, policy, policies_full = solve_bellman(a_grid, z_MC, agg_state, param)
 # 2.5 s with NLopt
@@ -41,13 +41,12 @@ include("housing-simple-jump.jl")
 
 
 using DelimitedFiles
-#writedlm("test/matrices/housing_simple_value.txt", value)
-value_test = readdlm("test/matrices/housing_simple_value.txt")
+#writedlm("test/matrices/housing_simple_nlopt_value.txt", val)
+value_test = readdlm("test/matrices/housing_simple_nlopt_value.txt")
 
-@test all(value .== value_test)
+@test all(val .== value_test)
 
-
-
+using Plots
 plot(val)
 
 scatter(a_grid, policies_full.w_next)
@@ -58,6 +57,9 @@ scatter(a_grid, policies_full.c)
 all(policies_full.conv)
 
 dist = stationary_distribution(z_MC, a_grid, policies_full.w_next)
+#writedlm("test/matrices/housing_simple_nlopt_dist.txt", dist)
+dist_test = readdlm("test/matrices/housing_simple_nlopt_dist.txt")
+@test all(dist .== dist_test)
 
 using StatsBase
 mean(vec(policies_full.m), Weights(vec(dist)))
@@ -65,6 +67,3 @@ mean(vec(policies_full.h), Weights(vec(dist)))
 #926 μs
 plot(a_grid, dist)
 
-#writedlm("test/matrices/huggett_dist.txt", dist)
-dist_test = readdlm("test/matrices/huggett_dist.txt")
-@test all(dist .== dist_test)
