@@ -1,7 +1,7 @@
 using NLopt
 using ForwardDiff
 
-function w_next(c, h, states, agg_state, 𝔼V, params)
+function w_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   @unpack p, r = agg_state
   @unpack δ = params
   w = states.a
@@ -10,7 +10,7 @@ function w_next(c, h, states, agg_state, 𝔼V, params)
   w_next = w + y - c - p * h * (r + δ)
 end
 
-function m_next(c, h, states, agg_state, 𝔼V, params)
+function m_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   @unpack p = agg_state
   w = states.a
   y = states.z
@@ -18,21 +18,21 @@ function m_next(c, h, states, agg_state, 𝔼V, params)
   m = p * h + c - y - w
 end
 
-function objective0(c, h, states, agg_state, 𝔼V, params)
+function objective0(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   @unpack β = params
   
-  w_next_ = w_next(c, h, states, agg_state, 𝔼V, params)
+  w_next_ = w_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
 
   u(c,h) + β * 𝔼V(w_next_)  
 end
 
-function constraint0(c, h, states, agg_state, 𝔼V, params)
+function constraint0(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   @unpack p, r = agg_state
   @unpack β, θ, δ = params
   w = states.a
   y = states.z
   
-  m = m_next(c, h, states, agg_state, 𝔼V, params)
+  m = m_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   
   #(1+r) * m <= p * h * (1-δ) * θ
   (1+r) * m - (p * h * (1-δ) * θ)
@@ -52,7 +52,7 @@ function constraint_nlopt(x::Vector, grad::Vector, args...)
   constraint0(x[1], x[2], args...)
 end
   
-function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid)
+function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid, hh::Owner)
   opt = Opt(:LD_MMA, 2)
   #opt = Opt(:LD_SLSQP, 2)
   lower_bounds!(opt, [eps(), eps()])
@@ -60,16 +60,16 @@ function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid)
   xtol_rel!(opt, 1e-10)
   ftol_rel!(opt, 1e-10)
   
-  max_objective!(opt, (x,g) -> objective_nlopt(x, g, states, agg_state, 𝔼V, params))
-  inequality_constraint!(opt, (x,g) -> constraint_nlopt(x, g, states, agg_state, 𝔼V, params), 1e-8)
+  max_objective!(opt, (x,g) -> objective_nlopt(x, g, states, agg_state, 𝔼V, params, hh))
+  inequality_constraint!(opt, (x,g) -> constraint_nlopt(x, g, states, agg_state, 𝔼V, params, hh), 1e-8)
   
   guess = sum(states)/2
   (max_f, max_x, ret) = optimize(opt, [guess, guess / agg_state.p])
 
   val = max_f
   c, h = max_x
-  m = m_next(c, h, states, agg_state, 𝔼V, params)
-  w_ = w_next(c, h, states, agg_state, 𝔼V, params)
+  m = m_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
+  w_ = w_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   
   conv = ret in [:FTOL_REACHED, :XTOL_REACHED, :SUCCESS, :LOCALLY_SOLVED]
   

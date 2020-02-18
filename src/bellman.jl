@@ -1,10 +1,10 @@
 function get_optimum end
 
-function solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_MC, converged, aggregate_state, params; maxiter=100, tol = √eps())
+function solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_MC, converged, aggregate_state, params, hh::Household; maxiter=100, tol = √eps())
   
   prog = ProgressThresh(tol, "Solving Bellman equation")
   for i in 1:maxiter
-    iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_MC, converged, aggregate_state, params)
+    iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_MC, converged, aggregate_state, params, hh::Household)
     diff = norm(value_old - value_new)
     ProgressMeter.update!(prog, diff)
     value_old .= value_new
@@ -19,17 +19,17 @@ function solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_M
   end
 end
 
-function solve_bellman(a_grid, z_MC, aggregate_state, params; maxiter=200, tol=eps()^0.4)
+function solve_bellman(a_grid, z_MC, aggregate_state, params, hh::Household; maxiter=200, tol=eps()^0.4)
   value_old = zeros(length(a_grid), length(z_MC.state_values))
   value_new = zeros(size(value_old))
   
-  @unpack proto_pol, proto_pol_full = proto_policy(a_grid, z_MC, value_new, aggregate_state, params)
+  @unpack proto_pol, proto_pol_full = proto_policy(a_grid, z_MC, value_new, aggregate_state, params, hh)
   
   policy = fill(proto_pol, size(value_old))
   policies_full = fill(proto_pol_full, size(value_old))
   converged = trues(size(value_old))
   
-  solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_MC, converged, aggregate_state, params; maxiter=maxiter, tol=tol)
+  solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_MC, converged, aggregate_state, params, hh::Household; maxiter=maxiter, tol=tol)
   
   # checks
   # at_max = mean(policy .≈ a_grid[end])
@@ -43,11 +43,11 @@ function solve_bellman(a_grid, z_MC, aggregate_state, params; maxiter=200, tol=e
   (val = value_new, policy = policy, policies_full=StructArray(policies_full), converged=converged)
 end
 
-function proto_policy(a_grid, z_MC, value, agg_state, params)
+function proto_policy(a_grid, z_MC, value, agg_state, params, hh::Household)
   
   states = (a=a_grid[1], z=z_MC.state_values[1])
   𝔼V = expected_value2(value, z_MC.p[1,:], BSpline(Linear()), a_grid)
-  @unpack pol, pol_full = get_optimum(states, agg_state, 𝔼V, params, a_grid)
+  @unpack pol, pol_full = get_optimum(states, agg_state, 𝔼V, params, a_grid, hh::Household)
         
   (proto_pol=pol, proto_pol_full=pol_full)
 end
@@ -67,7 +67,7 @@ function expected_value2(value, π, itp_scheme, a_grid)
           )
 end
         
-function iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_mc, converged, agg_state, params)
+function iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z_mc, converged, agg_state, params, hh::Household)
   n = length(value_new)
   prog = Progress(n, desc="Iterating", offset=1, dt=1)
   for (i_z, z) in enumerate(z_mc.state_values)
@@ -78,7 +78,7 @@ function iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, z
     for (i_a, a) in enumerate(a_grid) 
       states = (a=a, z=z)
       ProgressMeter.next!(prog)
-      @unpack pol, pol_full, val, conv = get_optimum(states, agg_state, 𝔼V, params, a_grid)
+      @unpack pol, pol_full, val, conv = get_optimum(states, agg_state, 𝔼V, params, a_grid, hh::Household)
 
       policy[i_a, i_z]    = pol 
       policies_full[i_a, i_z] = pol_full

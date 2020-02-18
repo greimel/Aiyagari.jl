@@ -30,7 +30,7 @@ function HousingAS(r, p, a_grid, z_MC, param)
   HousingAS(r, p, ρ, dist_proto)
 end
 
-#include("housing-simple-nlopt.jl")
+include("housing-simple-nlopt.jl")
 include("renting-nlopt.jl")
 #include("housing-simple-jump.jl")
 r = 0.29
@@ -38,10 +38,11 @@ r = 0.29
  param = (β = 0.7, θ = 0.9, δ = 0.1)
  agg_state = HousingAS(r, 2.2, a_grid, z_MC, param)
 
-@unpack val, policy, policies_full = solve_bellman(a_grid, z_MC, agg_state, param)
+@unpack val, policy, policies_full = solve_bellman(a_grid, z_MC, agg_state, param, Owner())
+@unpack val, policy, policies_full = solve_bellman(a_grid, z_MC, agg_state, param, Renter())
  # 2.5 s with NLopt
  # 129 s 60 itr with JuMP
-scatter(a_grid, policies_full.a_next)
+scatter(a_grid, policies_full.w_next)
   plot!(a_grid, a_grid)
   plot!(a_grid[[1;end]], a_grid[[end;end]], legend=false)
 
