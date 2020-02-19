@@ -53,30 +53,50 @@ function constraint_nlopt(x::Vector, grad::Vector, args...)
 end
   
 function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid, hh::Owner)
-  opt = Opt(:LD_MMA, 2)
-  #opt = Opt(:LD_SLSQP, 2)
-  lower_bounds!(opt, [eps(), eps()])
+  @unpack h_thres = params
   
-  xtol_rel!(opt, 1e-10)
-  ftol_rel!(opt, 1e-10)
+  # 1. check if feasible set is non-empty
+  h_max = let
+    w = states.a
+    y = states.z
+    @unpack δ, θ = params
+    @unpack p, r = agg_state
+    
+    (w + y) / (p * (1 - (1-δ) * θ / (1+r)))
+  end
   
-  max_objective!(opt, (x,g) -> objective_nlopt(x, g, states, agg_state, 𝔼V, params, hh))
-  inequality_constraint!(opt, (x,g) -> constraint_nlopt(x, g, states, agg_state, 𝔼V, params, hh), 1e-8)
-  
-  guess = sum(states)/2
-  (max_f, max_x, ret) = optimize(opt, [guess, guess / agg_state.p])
+  if h_max < h_thres
+    conv = true
+    pol_full = (c=NaN, h=NaN, m=NaN, w_next=NaN, ret=:infeasible, conv=conv, count=0)
+    val = -Inf
+    
+  else
+    opt = Opt(:LD_MMA, 2)
+    #opt = Opt(:LD_SLSQP, 2)
+    lower_bounds!(opt, [eps(), params.h_thres])
+    
+    xtol_rel!(opt, 1e-10)
+    ftol_rel!(opt, 1e-10)
+    
+    max_objective!(opt, (x,g) -> objective_nlopt(x, g, states, agg_state, 𝔼V, params, hh))
+    inequality_constraint!(opt, (x,g) -> constraint_nlopt(x, g, states, agg_state, 𝔼V, params, hh), 1e-8)
+    
+    guess = sum(states)/2
+    (max_f, max_x, ret) = optimize(opt, [guess/10, max(guess / agg_state.p, params.h_thres)])
 
-  val = max_f
-  c, h = max_x
-  m = m_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
-  w_ = w_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
-  
-  conv = ret in [:FTOL_REACHED, :XTOL_REACHED, :SUCCESS, :LOCALLY_SOLVED]
-  
-  pol_full = (c=c, h=h, m=m, w_next=w_, ret=ret, conv=conv, count= opt.numevals)
+    val = max_f
+    c, h = max_x
+    m = m_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
+    w_ = w_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
+    
+    conv = ret in [:FTOL_REACHED, :XTOL_REACHED, :SUCCESS, :LOCALLY_SOLVED]
+    
+    pol_full = (c=c, h=h, m=m, w_next=w_, ret=ret, conv=conv, count= opt.numevals)
+    
+  end
   pol = pol_full.w_next, pol_full.h                    
       
-  (pol=pol, pol_full=pol_full, val=val, conv=all(conv))
+  (pol=pol, pol_full=pol_full, val=val, conv= conv)
 end
 
 state1 =  (a = 0.01, z = 0.5)

@@ -49,6 +49,7 @@ function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid, hh::Rent
   opt = Opt(:LD_MMA, 2)
   #opt = Opt(:LD_SLSQP, 2)
   lower_bounds!(opt, [eps(), eps()])
+  upper_bounds!(opt, [+Inf, params.h_thres])
   
   xtol_rel!(opt, √eps())
   ftol_rel!(opt, eps())
@@ -59,7 +60,7 @@ function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid, hh::Rent
   inequality_constraint!(opt, (x,g) -> constraint_nlopt(x, g, states, agg_state, 𝔼V, params, hh), eps())
     
   guess = sum(states)/2
-  (max_f, max_x, ret) = optimize(opt, [guess, guess / agg_state.ρ])
+  (max_f, max_x, ret) = optimize(opt, [guess, min(guess / agg_state.ρ, params.h_thres)])
 
   val = max_f
   c, h = max_x
