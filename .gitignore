@@ -6,3 +6,5 @@
 *.pdf
 
 tex/auto/
+
+*.out
