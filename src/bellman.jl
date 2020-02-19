@@ -3,7 +3,8 @@ function get_optimum end
 function solve_bellman(a_grid, z_MC, aggregate_state, params, hh::OwnOrRent; maxiter=200, tol=eps()^0.4)
   value_old = zeros(length(a_grid), length(z_MC.state_values))
   value_new = zeros(size(value_old))
-  
+  owner = trues(size(value_old))
+    
   proto_own  = proto_policy(a_grid, z_MC, value_new, aggregate_state, params, Owner())
   proto_rent = proto_policy(a_grid, z_MC, value_new, aggregate_state, params, Renter())
   
@@ -14,7 +15,7 @@ function solve_bellman(a_grid, z_MC, aggregate_state, params, hh::OwnOrRent; max
   policies_full = fill.(proto_pol_full, Ref(size(value_old)))
   converged = [trues(size(value_old)), trues(size(value_old))]
   
-  solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_MC, converged, aggregate_state, params, hh::Household; maxiter=maxiter, tol=tol)
+  solve_bellman!(value_old, value_new, policy, policies_full, owner, a_grid, z_MC, converged, aggregate_state, params, hh::Household; maxiter=maxiter, tol=tol)
   
   # checks
   # at_max = mean(policy .≈ a_grid[end])
@@ -25,10 +26,10 @@ function solve_bellman(a_grid, z_MC, aggregate_state, params, hh::OwnOrRent; max
   all(all.(converged)) || @warn "optimization didn't converge at $(mean.(converged) * 100)%"
 
   
-  (val = value_new, policy = policy, policies_full=StructArray.(policies_full), converged=converged)
+  (val = value_new, policy = policy, owner=owner, policies_full=StructArray.(policies_full), converged=converged)
 end
 
-function solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_MC, converged, aggregate_state, params, hh::OwnOrRent; maxiter=100, tol = √eps())
+function solve_bellman!(value_old, value_new, policy, policies_full, owner, a_grid, z_MC, converged, aggregate_state, params, hh::OwnOrRent; maxiter=100, tol = √eps())
   
   value_own = zeros(size(value_old))
   value_rent = zeros(size(value_old))
@@ -40,6 +41,7 @@ function solve_bellman!(value_old, value_new, policy, policies_full, a_grid, z_M
     # rent
     iterate_bellman!(value_rent, value_old, policy[2], policies_full[2], a_grid, z_MC, converged[2], aggregate_state, params, Renter())
     
+    owner .= value_own .> value_rent
     value_new .= max.(value_own, value_rent)
     
     diff = norm(value_old - value_new)
