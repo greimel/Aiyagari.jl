@@ -26,7 +26,7 @@ end
 
 function HousingAS(r, p, a_grid, z_MC, param)
   dist_proto = zeros((length(a_grid), length(z_MC.state_values)))
-  ρ = p * (param.δ)
+  ρ = p * (param.δ + r)
   HousingAS(r, p, ρ, dist_proto)
 end
 
@@ -35,15 +35,23 @@ include("renting-nlopt.jl")
 #include("housing-simple-jump.jl")
 r = 0.29
  a_grid = LinRange(-√eps(), 5, 50)
- param = (β = 0.7, θ = 0.9, δ = 0.1)
+ param_own  = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = 0.0)
+ param_rent = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = Inf)
+ param_both = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = 0.6)
  agg_state = HousingAS(r, 2.2, a_grid, z_MC, param)
 
-@unpack val, policy, policies_full = solve_bellman(a_grid, z_MC, agg_state, param, Owner())
-@unpack val, policy, policies_full = solve_bellman(a_grid, z_MC, agg_state, param, Renter())
-@unpack val, policy, policies_full = solve_bellman(a_grid, z_MC, agg_state, param, OwnOrRent())
+@unpack val, policy, policies_full = solve_bellman(a_grid, z_MC, agg_state, param_own, Owner())
+@unpack val, policy, policies_full = solve_bellman(a_grid, z_MC, agg_state, param_rent, Renter())
+@unpack val, policy, policies_full, owner = solve_bellman(a_grid, z_MC, agg_state, param_both, OwnOrRent())
  # 2.5 s with NLopt
  # 129 s 60 itr with JuMP
-scatter(a_grid, policies_full.w_next)
+
+plot(a_grid, owner)
+
+w_next_all = policies_full[1].w_next .* owner .+ policies_full[2].w_next .* .!owner
+h_all = policies_full[1].h .* owner .+ policies_full[2].h .* .!owner
+
+scatter(a_grid, w_next_all)
   plot!(a_grid, a_grid)
   plot!(a_grid[[1;end]], a_grid[[end;end]], legend=false)
 
@@ -58,13 +66,16 @@ using Plots
 plot(val)
 
 scatter(a_grid, policies_full.w_next)
-scatter(a_grid, policies_full.h)
+scatter(a_grid, policies_full[1].h)
+scatter!(a_grid, policies_full[2].h)
+scatter(a_grid, h_all, legend=:topleft)
+
 scatter(a_grid, policies_full.m)
 scatter(a_grid, policies_full.c)
 
 all(policies_full.conv)
 
-dist = stationary_distribution(z_MC, a_grid, policies_full.a_next)
+dist = stationary_distribution(z_MC, a_grid, w_next_all)
  plot(a_grid, dist)
 #writedlm("test/matrices/housing_simple_nlopt_dist.txt", dist)
 dist_test = readdlm("test/matrices/housing_simple_nlopt_dist.txt")
