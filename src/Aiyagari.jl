@@ -17,6 +17,7 @@ abstract type Household end
 struct Consumer <: Household end
 struct Owner <: Household end
 struct Renter <: Household end
+struct OwnOrRent <: Household end
 
 include("bellman.jl")
 include("stationary-distribution.jl")
@@ -26,6 +27,6 @@ include("aggregate-state.jl")
 export solve_bellman
 export controlled_markov_chain, stationary_distribution
 export AggregateState
-export Household, Owner, Renter, Consumer
+export Household, Owner, Renter, Consumer, OwnOrRent
 
 end # module

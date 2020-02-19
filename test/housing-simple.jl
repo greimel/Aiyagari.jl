@@ -40,6 +40,7 @@ r = 0.29
 
 @unpack val, policy, policies_full = solve_bellman(a_grid, z_MC, agg_state, param, Owner())
 @unpack val, policy, policies_full = solve_bellman(a_grid, z_MC, agg_state, param, Renter())
+@unpack val, policy, policies_full = solve_bellman(a_grid, z_MC, agg_state, param, OwnOrRent())
  # 2.5 s with NLopt
  # 129 s 60 itr with JuMP
 scatter(a_grid, policies_full.w_next)
