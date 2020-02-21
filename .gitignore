@@ -8,3 +8,5 @@
 tex/auto/
 
 *.out
+
+*.ipynb
