@@ -19,6 +19,9 @@ z_prob = [0.7 0.15 0.15;
           0.15 0.15 0.7]
 z_MC = MarkovChain(z_prob, z_grid)
 
+# exo_MC = MarkovChain(z_MC, κ_MC, (:z, :κ))
+# exo_MC.state_values[1]
+
 mutable struct HousingAS{T1,T2,T3,T4} <: AggregateState
   r::T1
   p::T2 # house price
@@ -35,14 +38,10 @@ include("housing-simple-nlopt.jl")
 include("renting-nlopt.jl")
 #include("housing-simple-jump.jl")
 r = 0.29
-# a_grid = LinRange(-√eps(), 2.5, 50)
-
-param_rent = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = Inf)
-param_both = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = 0.6)
 
 # ## Forever home owners
 r_own = 0.29
-a_grid_own = LinRange(0.0, 0.75, 50)
+a_grid_own = LinRange(0.0, 0.7, 50)
 param_own  = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = eps())
 agg_state_own = HousingAS(r_own, 2.2, a_grid_own, z_MC, param_own)
   
@@ -61,13 +60,12 @@ plot(a_grid_own, policies_full.h, title="house size", xlab="wealth", legend=:top
 #plot(a_grid_own, policies_full.m, title="mortgage", xlab="wealth")
 
 dist = stationary_distribution(z_MC, a_grid_own, policies_full.w_next)
-plot(a_grid_own, dist, xlab="wealth" )
 
 #writedlm("test/matrices/housing_simple_nlopt_dist.txt", dist)
 dist_test = readdlm("test/matrices/housing_simple_nlopt_dist.txt")
-plot!(a_grid_own, dist_test)
-
 all(dist_test .≈ dist) || maximum(abs, dist_test .- dist)
+
+plot(a_grid_own, dist, xlab="wealth" )
 
 # ## Forever renters
 
@@ -86,13 +84,20 @@ plot(a_grid_rent, dist, xlab="wealth" )
 
 # ## Own big, rent small
 
-@unpack val, policy, policies_full, owner = solve_bellman(a_grid, z_MC, agg_state, param_both, OwnOrRent())
+a_grid = LinRange(-√eps(), 1.5, 50)
+param_both = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = 0.6)
+agg_state_both = HousingAS(r, 2.2, a_grid, z_MC, param_both, ρ=2.2 * (param_both.δ + r) * 1.5)
+
+
+@unpack val, policy, policies_full, owner = solve_bellman(a_grid, z_MC, agg_state_both, param_both, OwnOrRent(), maxiter=70)
 
 w_next_all = policies_full[1].w_next .* owner .+ policies_full[2].w_next .* .!owner
 h_all = policies_full[1].h .* owner .+ policies_full[2].h .* .!owner
 c_all = policies_full[1].c .* owner .+ policies_full[2].c .* .!owner
 
 plot(a_grid, owner, title="Who owns?")
+
+plot(a_grid, h_all, legend=:topleft, title="House size")
 
 # 
 
