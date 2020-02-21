@@ -13,7 +13,7 @@ function u(c,h; ξ=0.8159, ρ=map(s -> (s-1)/s, 0.13), γ=2.0)
 end
 
 # Exogenous states (incomes)
-z_grid = [0.5; 1.0; 1.5]
+z_grid = NamedTuple{(:z,)}.([0.5; 1.0; 1.5])
 z_prob = [0.7 0.15 0.15;
           0.2 0.6 0.2;
           0.15 0.15 0.7]

@@ -13,6 +13,9 @@ using ProgressMeter
 include("Expectations.jl")
 using .Expectations
 
+include("ExogenousStates.jl")
+using .ExogenousStates
+
 abstract type Household end
 struct Consumer <: Household end
 struct Owner <: Household end
@@ -28,5 +31,7 @@ export solve_bellman
 export controlled_markov_chain, stationary_distribution
 export AggregateState
 export Household, Owner, Renter, Consumer, OwnOrRent
+
+export MarkovChain
 
 end # module

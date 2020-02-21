@@ -4,18 +4,18 @@ using ForwardDiff
 function w_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   @unpack p, r = agg_state
   @unpack δ = params
+  @unpack z = states
   w = states.a
-  y = states.z
-  
-  w_next = w + y - c - p * h * (r + δ)
+     
+  w_next = w + z - c - p * h * (r + δ)
 end
 
 function m_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   @unpack p = agg_state
+  @unpack z = states
   w = states.a
-  y = states.z
   
-  m = p * h + c - y - w
+  m = p * h + c - z - w
 end
 
 function objective0(c, h, states, agg_state, 𝔼V, params, hh::Owner)
@@ -29,8 +29,6 @@ end
 function constraint0(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   @unpack p, r = agg_state
   @unpack β, θ, δ = params
-  w = states.a
-  y = states.z
   
   m = m_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   
@@ -58,11 +56,11 @@ function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid, hh::Owne
   # 1. check if feasible set is non-empty
   h_max = let
     w = states.a
-    y = states.z
+    @unpack z = states
     @unpack δ, θ = params
     @unpack p, r = agg_state
     
-    (w + y) / (p * (1 - (1-δ) * θ / (1+r)))
+    (w + z) / (p * (1 - (1-δ) * θ / (1+r)))
   end
   
   if h_max < h_thres
