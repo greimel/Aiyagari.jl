@@ -78,11 +78,15 @@ function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid, hh::Owne
     xtol_rel!(opt, 1e-10)
     ftol_rel!(opt, 1e-10)
     
+    maxeval!(opt, 250)
+    
     max_objective!(opt, (x,g) -> objective_nlopt(x, g, states, agg_state, 𝔼V, params, hh))
     inequality_constraint!(opt, (x,g) -> constraint_nlopt(x, g, states, agg_state, 𝔼V, params, hh), 1e-8)
     
     guess = sum(states)/2
-    (max_f, max_x, ret) = optimize(opt, [guess/10, max(guess / agg_state.p, params.h_thres)])
+    #guesses = [guess, guess / agg_state.p]
+    guesses = [guess/10, max(guess / agg_state.p, params.h_thres)]
+    (max_f, max_x, ret) = optimize(opt, guesses)
 
     val = max_f
     c, h = max_x

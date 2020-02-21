@@ -94,8 +94,10 @@ function solve_bellman(a_grid, z_MC, aggregate_state, params, hh::Household; max
   # at_min = mean(policy .≈ a_grid[1])
   # at_max > 0 && @warn "optimal policy is at upper bound $(100 * at_max) % of the time"
   # at_min > 0 && @warn "optimal policy is at lower bound $(100 * at_min) % of the time"
-
-  all(converged) || @warn "optimization didn't converge at $(mean(converged) * 100)%"
+  
+  number_conv = sum(converged)
+  
+  length(converged) == number_conv || @warn "Bellman didn't converge at $(round((1-number_conv / length(converged)) * 100, digits=4))% ($(length(converged) - number_conv) states)"
 
   
   (val = value_new, policy = policy, policies_full=StructArray(policies_full), converged=converged)

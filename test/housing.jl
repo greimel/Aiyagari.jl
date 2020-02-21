@@ -35,24 +35,39 @@ include("housing-simple-nlopt.jl")
 include("renting-nlopt.jl")
 #include("housing-simple-jump.jl")
 r = 0.29
- a_grid = LinRange(-√eps(), 2.5, 50)
- param_own  = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = 0.0)
- param_rent = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = Inf)
- param_both = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = 0.6)
- agg_state = HousingAS(r, 2.2, a_grid, z_MC, param_both)
+# a_grid = LinRange(-√eps(), 2.5, 50)
+
+param_rent = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = Inf)
+param_both = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = 0.6)
 
 # ## Forever home owners
+r_own = 0.29
+a_grid_own = LinRange(0.0, 0.75, 50)
+param_own  = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = eps())
+agg_state_own = HousingAS(r_own, 2.2, a_grid_own, z_MC, param_own)
+  
+@unpack val, policy, policies_full = solve_bellman(a_grid_own, z_MC, agg_state_own, param_own, Owner())
 
-@unpack val, policy, policies_full = solve_bellman(a_grid, z_MC, agg_state, param_own, Owner())
+using DelimitedFiles
+#writedlm("test/matrices/housing_simple_nlopt_value.txt", val)
+value_test = readdlm("test/matrices/housing_simple_nlopt_value.txt")
 
-plot(a_grid, policies_full.h, title="house size", xlab="wealth", legend=:topleft)
+@show all(value_test .≈ val) || maximum(abs, value_test .- val)
+
+plot(a_grid_own, policies_full.h, title="house size", xlab="wealth", legend=:topleft)
 
 # 
 
-#plot(a_grid, policies_full.m, title="mortgage", xlab="wealth")
+#plot(a_grid_own, policies_full.m, title="mortgage", xlab="wealth")
 
-dist = stationary_distribution(z_MC, a_grid, policies_full.w_next)
-plot(a_grid, dist, xlab="wealth" )
+dist = stationary_distribution(z_MC, a_grid_own, policies_full.w_next)
+plot(a_grid_own, dist, xlab="wealth" )
+
+#writedlm("test/matrices/housing_simple_nlopt_dist.txt", dist)
+dist_test = readdlm("test/matrices/housing_simple_nlopt_dist.txt")
+plot!(a_grid_own, dist_test)
+
+all(dist_test .≈ dist) || maximum(abs, dist_test .- dist)
 
 # ## Forever renters
 
