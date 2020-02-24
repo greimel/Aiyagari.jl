@@ -21,67 +21,7 @@ function marginal_distribution(exo, var)
   dropdims(mean(sum_columns, dims=int_dim), dims=Tuple(int_dim))
 end
 
-@testset "marginal distribution" begin
-  # Exogenous states (incomes)
-  x1_grid = [0.5; 1.0; 1.5]
-  x1_prob = [0.7 0.15 0.15;
-             0.2 0.6 0.2;
-             0.15 0.15 0.7]
-  x1_MC = MarkovChain(x1_prob, x1_grid, :x1)
-
-  x2_grid = [0.15; 1.1; 1.15; 3.0]
-  x2_prob = [0.15 0.0 0.7  0.15;
-             0.6  0.2 0.0  0.2;
-             0.15 0.15 0.7 0.0;
-             0.6  0.2 0.0  0.2]
-  x2_MC = MarkovChain(x2_prob, x2_grid, :x2)
-
-  x3_grid = [0.3; 0.6]
-  x3_prob = [0.7 0.3;
-             1.0 0.0]
-  x3_MC = MarkovChain(x3_prob, x3_grid, :x3)
-
-  exo = ExogenousStatespace([x1_MC, x2_MC, x3_MC])
-
-  @test all(marginal_distribution(exo, :x1) .≈ x1_prob)
-  @test all(marginal_distribution(exo, :x2) .≈ x2_prob)
-  @test all(marginal_distribution(exo, :x3) .≈ x3_prob)
-end
-
 ## (Conditional) expectations of value functions
-
-# Moving shocks
-exo = let
-  x1_grid = [0.5; 1.0; 1.5]
-  x1_prob = [0.7 0.15 0.15;
-             0.2 0.6 0.2;
-             0.15 0.15 0.7]
-  x1_MC = MarkovChain(x1_prob, x1_grid, :x1)
-
-  x2_grid = [0.15; 1.1; 1.15; 3.0]
-  x2_prob = [0.15 0.0 0.7  0.15;
-             0.6  0.2 0.0  0.2;
-             0.15 0.15 0.7 0.0;
-             0.6  0.2 0.0  0.2]
-  x2_MC = MarkovChain(x2_prob, x2_grid, :x2)
-
-  x3_grid = [0.3; 0.6]
-  x3_prob = [0.7 0.3;
-             1.0 0.0]
-  x3_MC = MarkovChain(x3_prob, x3_grid, :x3)
-
-  exo = ExogenousStatespace([x1_MC, x2_MC, x3_MC])
-end
-
-a_grid = LinRange(5, 10, 50)
-
-function my_val(a, exo)
-  c = a + exo.x1 - (exo.x2 == 0.6)
-  #c > 0 ? log(c) : 1 * c - 1
-end
-
-value = my_val.(a_grid, permutedims(exo.grid))
-value
 
 function conditional_expected_value(value, exo, i_exo, condition)
   len_endo = size(value,1)
@@ -104,22 +44,54 @@ function conditional_expected_value(value, exo, i_exo, condition)
   
 end
 
-i_exo = 5
+@testset "exogenous states" begin
+  x1_grid = [0.5; 1.0; 1.5]
+  x1_prob = [0.7 0.15 0.15;
+             0.2 0.6 0.2;
+             0.15 0.15 0.7]
+  x1_MC = MarkovChain(x1_prob, x1_grid, :x1)
 
-@testset "conditional expectation" begin
-  for i_exo in [1; 3; 5]
-    for (i_dim, cond_dim) in enumerate([:x1, :x2, :x3])
-      oth_dim = findall(keys(exo) .!= cond_dim)
-      π_sub = dropdims(sum(reshape(exo.mc.p[i_exo,:], size(exo)), dims=oth_dim), dims=Tuple(oth_dim))
+  x2_grid = [0.15; 1.1; 1.15; 3.0]
+  x2_prob = [0.15 0.0 0.7  0.15;
+             0.6  0.2 0.0  0.2;
+             0.15 0.15 0.7 0.0;
+             0.6  0.2 0.0  0.2]
+  x2_MC = MarkovChain(x2_prob, x2_grid, :x2)
 
-      𝔼V = mapreduce(+, 1:size(exo)[i_dim]) do x
-       conditional_expected_value(value, exo, i_exo, cond_dim => x) * π_sub[x]
+  x3_grid = [0.3; 0.6]
+  x3_prob = [0.7 0.3;
+             1.0 0.0]
+  x3_MC = MarkovChain(x3_prob, x3_grid, :x3)
+
+  exo = ExogenousStatespace([x1_MC, x2_MC, x3_MC])
+
+  @testset "marginal distribution" begin
+    @test all(marginal_distribution(exo, :x1) .≈ x1_prob)
+    @test all(marginal_distribution(exo, :x2) .≈ x2_prob)
+    @test all(marginal_distribution(exo, :x3) .≈ x3_prob)
+  end
+  
+  a_grid = LinRange(5, 10, 50)
+    
+  my_val = (a, exo) -> begin
+    c = a + exo.x1 - (exo.x2 == 0.6)
+    #c > 0 ? log(c) : 1 * c - 1
+  end
+  
+  value = my_val.(a_grid, permutedims(exo.grid))
+  
+  @testset "conditional expectation" begin
+    for i_exo in [1; 7; 14; 20; 24]
+      for (i_dim, cond_dim) in enumerate([:x1, :x2, :x3])
+        oth_dim = findall(keys(exo) .!= cond_dim)
+        π_sub = dropdims(sum(reshape(exo.mc.p[i_exo,:], size(exo)), dims=oth_dim), dims=Tuple(oth_dim))
+
+        𝔼V = mapreduce(+, 1:size(exo)[i_dim]) do x
+         conditional_expected_value(value, exo, i_exo, cond_dim => x) * π_sub[x]
+        end
+        
+        @test all(𝔼V .≈ value * exo.mc.p[i_exo,:])
       end
-      
-      @show maximum(abs, 𝔼V .- value * exo.mc.p[i_exo,:])
-      @test all(𝔼V .≈ value * exo.mc.p[i_exo,:])
     end
   end
 end
-
-
