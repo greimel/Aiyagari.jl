@@ -107,7 +107,7 @@ function proto_policy(a_grid, exo, value, agg_state, params, hh::Household)
   mc = MarkovChain(exo)
   
   states = (a=a_grid[1], mc.state_values[1]...)
-  𝔼V = extrapolated_𝔼V(a_grid, BSpline(Linear()), value, exo, 1, Unconditional())
+  𝔼V = extrapolated_𝔼V(a_grid, BSpline(Linear()), value, exo, 1, Conditional(:move))
   @unpack pol, pol_full = get_optimum(states, agg_state, 𝔼V, params, a_grid, hh::Household)
         
   (proto_pol=pol, proto_pol_full=pol_full)
@@ -121,7 +121,7 @@ function iterate_bellman!(value_new, value_old, policy, policies_full, a_grid, e
     # Create interpolated expected value function
     #𝔼V = expected_value2(value_old, mc.p[i_exo,:], BSpline(Linear()), a_grid)
     itp_scheme = BSpline(Cubic(Line(OnGrid())))
-    𝔼V = extrapolated_𝔼V(a_grid, itp_scheme, value_old, exo, i_exo, Unconditional())
+    𝔼V = extrapolated_𝔼V(a_grid, itp_scheme, value_old, exo, i_exo, Conditional(:move))
     
     for (i_a, a) in enumerate(a_grid) 
       states = (a=a, exo_state...)

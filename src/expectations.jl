@@ -25,14 +25,11 @@ end
 abstract type Expectation end
 struct Unconditional <: Expectation end
 struct Conditional <: Expectation
-  condition::Pair{Symbol,Int}
+  var::Symbol
 end
 
-function extrapolated_𝔼V(a_grid, itp_scheme, args...)
-  #itp_scheme = BSpline(Cubic(Line(OnGrid())))
-  #itp_scheme = BSpline(Linear())
-
-  𝔼V0 = get_𝔼V(args...)
+function extrapolated_𝔼V(a_grid, itp_scheme, value, exo, i_exo, ::Unconditional)
+  𝔼V0 = value * exo.mc.p[i_exo,:]
   
   𝔼V_itp = interpolate(𝔼V0, itp_scheme)
 
@@ -41,17 +38,35 @@ function extrapolated_𝔼V(a_grid, itp_scheme, args...)
           Interpolations.Line()
           )
 end
+
+function extrapolated_𝔼V(a_grid, itp_scheme, value, exo, i_exo, cond::Conditional)
+  var = cond.var
+  n = size(exo)[findfirst(keys(exo) .== var)]
   
+  𝔼V0_vec = map(1:n) do i
+    get_cond_𝔼V(value, exo, i_exo, var => i)
+  end
   
-function get_𝔼V(value, exo, i_exo, ::Unconditional)
-  value * exo.mc.p[i_exo,:]
+  𝔼V_itp = interpolate.(𝔼V0_vec, Ref(itp_scheme))
+  
+  𝔼V = extrapolate.(
+          scale.(𝔼V_itp, Ref(a_grid)),
+          Ref(Interpolations.Line())
+        )
+        
+  i_cond_var = exo.indices[i_exo][var]
+
+  π = marginal_distribution(exo, var)[i_cond_var, :]
+
+  vec -> mapreduce(+, 1:n) do i
+    π[i] * 𝔼V[i](vec[i]) 
+  end  
+    
 end
 
-function get_𝔼V(value, exo, i_exo, cond::Conditional)
+function get_cond_𝔼V(value, exo, i_exo, condition)
   len_endo = size(value,1)
   
-  condition = cond.condition
-   
   value_reshaped = reshape(value, (len_endo, size(exo)...))
   
   v = value_reshaped[:, [k == condition[1] ? condition[2] : Colon() for k in keys(exo)]...]
@@ -114,7 +129,7 @@ export extrapolated_𝔼V
         π_sub = dropdims(sum(reshape(exo.mc.p[i_exo,:], size(exo)), dims=oth_dim), dims=Tuple(oth_dim))
 
         𝔼V = mapreduce(+, 1:size(exo)[i_dim]) do x
-         get_𝔼V(value, exo, i_exo, Conditional(cond_dim => x)) * π_sub[x]
+         get_cond_𝔼V(value, exo, i_exo, cond_dim => x) * π_sub[x]
         end
         
         @test all(𝔼V .≈ value * exo.mc.p[i_exo,:])

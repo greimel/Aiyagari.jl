@@ -23,7 +23,7 @@ function objective0(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   
   w_next_ = w_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
 
-  u(c,h) + β * 𝔼V(w_next_)  
+  u(c,h) + β * 𝔼V([w_next_, w_next_, w_next_ - 0.4])    
 end
 
 function constraint0(c, h, states, agg_state, 𝔼V, params, hh::Owner)
