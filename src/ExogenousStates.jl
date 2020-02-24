@@ -12,7 +12,7 @@ end
 
 Base.size(exo::ExogenousStatespace) = exo.size
 Base.keys(exo::ExogenousStatespace) = keys(exo.grid[1])
-QuantEcon.MarkovChain(exo::ExogenousStatespace) = exo.mc
+MarkovChain(exo::ExogenousStatespace) = exo.mc
 
 function ExogenousStatespace(vec_mc)
   size = Tuple(length.(getproperty.(vec_mc, :state_values)))
