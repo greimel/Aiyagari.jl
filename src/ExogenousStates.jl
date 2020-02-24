@@ -24,7 +24,7 @@ function ExogenousStatespace(vec_mc)
   ExogenousStatespace(grid, size, mc, stationary_distributions(mc)[1])
 end
 
-named_grid(grid, name) = NamedTuple{(name,)}.(Tuple.(grid))
+named_grid(grid, name) = NamedTuple{(name,)}.(Tuple.(Ref.(grid)))
 
 function add_name(mc::MarkovChain, name::Symbol)
   MarkovChain(mc.p, named_grid(mc.state_values, name))
