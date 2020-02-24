@@ -32,9 +32,9 @@ end
 
 function product(mc1::MarkovChain, mc2::MarkovChain)
   
-  combined_grid = [merge(s1, s2) for s1 in mc1.state_values for s2 in mc2.state_values]
+  combined_grid = [merge(s1, s2) for s2 in mc2.state_values for s1 in mc1.state_values]
 
-  MarkovChain(kron(mc1.p, mc2.p), combined_grid)
+  MarkovChain(kron(mc2.p, mc1.p), combined_grid)
 end
 
 function product(mc_vec...)

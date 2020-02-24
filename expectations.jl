@@ -30,11 +30,11 @@ states_reshaped_SA = StructArray(states_reshaped)
 
 
 function marginal_distribution(mc, var)
-  size_exo = reverse((3,4,2))
+  size_exo = (3,4,2)
   p_reshaped = reshape(mc.p, (size_exo..., size_exo...))
   
   names = keys(mc.state_values[1])
-  integrate_dim_bool = reverse(names) .!= var
+  integrate_dim_bool = names .!= var
   
   n_dim = length(names)
   
