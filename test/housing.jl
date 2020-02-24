@@ -13,14 +13,20 @@ function u(c,h; ξ=0.8159, ρ=map(s -> (s-1)/s, 0.13), γ=2.0)
 end
 
 # Exogenous states (incomes)
-z_grid = NamedTuple{(:z,)}.([0.5; 1.0; 1.5])
+z_grid = [0.5; 1.0; 1.5]
 z_prob = [0.7 0.15 0.15;
           0.2 0.6 0.2;
           0.15 0.15 0.7]
-z_MC = MarkovChain(z_prob, z_grid)
+z_MC = MarkovChain(z_prob, z_grid, :z)
 
-# exo_MC = MarkovChain(z_MC, κ_MC, (:z, :κ))
-# exo_MC.state_values[1]
+# Moving shocks
+move_grid = Symbol[:just_moved, :normal, :move]
+move_prob = [0.7 0.3 0.0;
+          0.0 0.9 0.1;
+          1.0 0.0 0.0]
+move_MC = MarkovChain(move_prob, move_grid, :move)
+
+exo = ExogenousStatespace([z_MC, move_MC])
 
 mutable struct HousingAS{T1,T2,T3,T4} <: AggregateState
   r::T1
@@ -46,6 +52,7 @@ param_own  = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = eps())
 agg_state_own = HousingAS(r_own, 2.2, a_grid_own, z_MC, param_own)
   
 @unpack val, policy, policies_full = solve_bellman(a_grid_own, z_MC, agg_state_own, param_own, Owner())
+
 
 using DelimitedFiles
 #writedlm("test/matrices/housing_simple_nlopt_value.txt", val)
