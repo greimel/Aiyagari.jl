@@ -9,12 +9,13 @@ using SparseArrays: sparse
 using Arpack: eigs
 using StructArrays
 using ProgressMeter
+using Reexport
 
 include("Expectations.jl")
-using .Expectations
+@reexport using .Expectations
 
 include("ExogenousStates.jl")
-using .ExogenousStates
+@reexport using .ExogenousStates
 
 abstract type Household end
 struct Consumer <: Household end
