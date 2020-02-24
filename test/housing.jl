@@ -25,7 +25,7 @@ move_grid = [1, 2, 3]
 move_prob = [0.7 0.3 0.0;
              0.0 0.9 0.1;
              1.0 0.0 0.0]
-move_prob = ones(3,3)/3
+#move_prob = ones(3,3)/3
           
 move_MC = MarkovChain(move_prob, move_grid, :move)
 
@@ -97,41 +97,37 @@ all(dist_test .≈ dist) || maximum(abs, dist_test .- dist)
 plot(a_grid_own, dist, xlab="wealth" )
 
 # ## Forever renters
+r_rent = 0.15
 
-a_grid_rent = LinRange(1.0, 5.0, 50)
+a_grid_rent = LinRange(-0.05, 1.5, 50)
 param_rent = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = Inf)
-agg_state_rent = HousingAS(r, 2.2, a_grid_rent, exo, param_rent)
+agg_state_rent = HousingAS(r_rent, 2.2, a_grid_rent, exo, param_rent, ρ=2.2 * (param_rent.δ + r))
 
-@unpack val, policy, policies_full = solve_bellman(a_grid_rent, exo_old, agg_state_rent, param_rent, Renter(Aiyagari.Unconditional()), maxiter=50)
+@unpack val, policy, policies_full = solve_bellman(a_grid_rent, exo, agg_state_rent, param_rent, Renter(Aiyagari.Unconditional()), maxiter=100)
 
 plot(a_grid_rent, Aiyagari.get_cond_𝔼V(val, exo, 1, :z => 1))
  plot!(a_grid_rent, Aiyagari.get_cond_𝔼V(val, exo, 2, :z => 2))
  plot!(a_grid_rent, Aiyagari.get_cond_𝔼V(val, exo, 3, :z => 3))
 
-scatter!(a_grid_rent, val)
-size(exo)
-size(exo_old)
+plot(a_grid_rent, val)
 
-exo_old.mc.p
-keys(exo_old)
-
-Aiyagari.marginal_distribution(exo, :z)
-Aiyagari.marginal_distribution(exo_old, :z)
 plot(a_grid_rent, policies_full.w_next, title="house size", xlab="wealth", legend=:topleft)
 
 # ### Stationary distribution
 
-dist = stationary_distribution(z_MC, a_grid_rent, policies_full.w_next)
+dist = stationary_distribution(exo.mc, a_grid_rent, policies_full.w_next)
 plot(a_grid_rent, dist, xlab="wealth" )
 
 # ## Own big, rent small
 
 a_grid = LinRange(-√eps(), 1.5, 50)
 param_both = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = 0.6)
-agg_state_both = HousingAS(r, 2.2, a_grid, z_MC, param_both, ρ=2.2 * (param_both.δ + r) * 1.5)
+agg_state_both = HousingAS(r, 2.2, a_grid, exo, param_both, ρ=2.2 * (param_both.δ + r) * 1.5)
 
 
-@unpack val, policy, policies_full, owner = solve_bellman(a_grid, z_MC, agg_state_both, param_both, OwnOrRent(), maxiter=70)
+@unpack val, policy, policies_full, owner = solve_bellman(a_grid, exo, agg_state_both, param_both, OwnOrRent(), maxiter=200)
+
+policies_full[1].conv
 
 w_next_all = policies_full[1].w_next .* owner .+ policies_full[2].w_next .* .!owner
 h_all = policies_full[1].h .* owner .+ policies_full[2].h .* .!owner
