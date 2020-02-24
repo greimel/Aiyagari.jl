@@ -17,6 +17,8 @@ include("Expectations.jl")
 include("ExogenousStates.jl")
 @reexport using .ExogenousStates
 
+include("expectations.jl")
+
 abstract type Household end
 struct Consumer <: Household end
 struct Owner <: Household end

@@ -26,7 +26,7 @@ move_prob = [0.7 0.3 0.0;
           1.0 0.0 0.0]
 move_MC = MarkovChain(move_prob, move_grid, :move)
 
-exo = ExogenousStatespace([z_MC, move_MC])
+exo = ExogenousStatespace([z_MC])
 
 mutable struct HousingAS{T1,T2,T3,T4} <: AggregateState
   r::T1
@@ -35,8 +35,8 @@ mutable struct HousingAS{T1,T2,T3,T4} <: AggregateState
   dist::T4 # the distribution over idiosynchratic states
 end
 
-function HousingAS(r, p, a_grid, z_MC, param; ρ=p * (param.δ + r))
-  dist_proto = zeros((length(a_grid), length(z_MC.state_values))) 
+function HousingAS(r, p, a_grid, exo, param; ρ=p * (param.δ + r))
+  dist_proto = zeros((length(a_grid), length(exo))) 
   HousingAS(r, p, ρ, dist_proto)
 end
 
@@ -49,9 +49,9 @@ r = 0.29
 r_own = 0.29
 a_grid_own = LinRange(0.0, 0.7, 50)
 param_own  = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = eps())
-agg_state_own = HousingAS(r_own, 2.2, a_grid_own, z_MC, param_own)
+agg_state_own = HousingAS(r_own, 2.2, a_grid_own, exo, param_own)
   
-@unpack val, policy, policies_full = solve_bellman(a_grid_own, z_MC, agg_state_own, param_own, Owner())
+@unpack val, policy, policies_full = solve_bellman(a_grid_own, exo, agg_state_own, param_own, Owner())
 
 
 using DelimitedFiles

@@ -11,6 +11,7 @@ struct ExogenousStatespace{T1,T2,T3,T4}
 end
 
 Base.size(exo::ExogenousStatespace) = exo.size
+Base.length(exo::ExogenousStatespace) = prod(size(exo))
 Base.keys(exo::ExogenousStatespace) = keys(exo.grid[1])
 MarkovChain(exo::ExogenousStatespace) = exo.mc
 

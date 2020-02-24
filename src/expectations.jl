@@ -1,4 +1,4 @@
-using Revise
+
 using Test, Aiyagari
 using QuantEcon, Parameters, Interpolations
 using Plots
@@ -22,10 +22,36 @@ function marginal_distribution(exo, var)
 end
 
 ## (Conditional) expectations of value functions
+abstract type Expectation end
+struct Unconditional <: Expectation end
+struct Conditional <: Expectation
+  condition::Pair{Symbol,Int}
+end
 
-function conditional_expected_value(value, exo, i_exo, condition)
+function extrapolated_𝔼V(a_grid, itp_scheme, args...)
+  #itp_scheme = BSpline(Cubic(Line(OnGrid())))
+  #itp_scheme = BSpline(Linear())
+
+  𝔼V0 = get_𝔼V(args...)
+  
+  𝔼V_itp = interpolate(𝔼V0, itp_scheme)
+
+  𝔼V = extrapolate(
+          scale(𝔼V_itp, a_grid),
+          Interpolations.Line()
+          )
+end
+  
+  
+function get_𝔼V(value, exo, i_exo, ::Unconditional)
+  value * exo.mc.p[i_exo,:]
+end
+
+function get_𝔼V(value, exo, i_exo, cond::Conditional)
   len_endo = size(value,1)
   
+  condition = cond.condition
+   
   value_reshaped = reshape(value, (len_endo, size(exo)...))
   
   v = value_reshaped[:, [k == condition[1] ? condition[2] : Colon() for k in keys(exo)]...]
@@ -41,8 +67,9 @@ function conditional_expected_value(value, exo, i_exo, condition)
   π_ = ∑π == 0 ? π_ : π_ / ∑π
    
   reshape(v, (len_endo, len_exo_other)) * vec(π_)
-  
 end
+
+export extrapolated_𝔼V
 
 @testset "exogenous states" begin
   x1_grid = [0.5; 1.0; 1.5]
@@ -87,7 +114,7 @@ end
         π_sub = dropdims(sum(reshape(exo.mc.p[i_exo,:], size(exo)), dims=oth_dim), dims=Tuple(oth_dim))
 
         𝔼V = mapreduce(+, 1:size(exo)[i_dim]) do x
-         conditional_expected_value(value, exo, i_exo, cond_dim => x) * π_sub[x]
+         get_𝔼V(value, exo, i_exo, Conditional(cond_dim => x)) * π_sub[x]
         end
         
         @test all(𝔼V .≈ value * exo.mc.p[i_exo,:])
@@ -95,3 +122,4 @@ end
     end
   end
 end
+
