@@ -23,8 +23,10 @@ z_MC = MarkovChain(z_prob, z_grid, :z)
 move_grid = Symbol[:just_moved, :normal, :move]
 move_grid = [1, 2, 3]
 move_prob = [0.7 0.3 0.0;
-          0.0 0.9 0.1;
-          1.0 0.0 0.0]
+             0.0 0.9 0.1;
+             1.0 0.0 0.0]
+move_prob = ones(3,3)/3
+          
 move_MC = MarkovChain(move_prob, move_grid, :move)
 
 # exo = ExogenousStatespace([z_MC, move_MC])
@@ -51,11 +53,11 @@ function HousingAS(r, p, a_grid, exo, param; ρ=p * (param.δ + r))
 end
 
 include("housing-simple-nlopt.jl")
-#include("renting-nlopt.jl")
+include("renting-nlopt.jl")
 #include("housing-simple-jump.jl")
 r = 0.29
 
-# exo_old = ExogenousStatespace([z_MC])
+exo_old = ExogenousStatespace([z_MC])
 exo = ExogenousStatespace([z_MC, move_MC])
 
 # ## Forever home owners
@@ -96,12 +98,25 @@ plot(a_grid_own, dist, xlab="wealth" )
 
 # ## Forever renters
 
-a_grid_rent = LinRange(-√eps(), 5.0, 50)
+a_grid_rent = LinRange(1.0, 5.0, 50)
 param_rent = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = Inf)
-agg_state_rent = HousingAS(r, 2.2, a_grid_rent, z_MC, param_rent)
+agg_state_rent = HousingAS(r, 2.2, a_grid_rent, exo, param_rent)
 
-@unpack val, policy, policies_full = solve_bellman(a_grid_rent, z_MC, agg_state_rent, param_rent, Renter())
+@unpack val, policy, policies_full = solve_bellman(a_grid_rent, exo_old, agg_state_rent, param_rent, Renter(Aiyagari.Unconditional()), maxiter=50)
 
+plot(a_grid_rent, Aiyagari.get_cond_𝔼V(val, exo, 1, :z => 1))
+ plot!(a_grid_rent, Aiyagari.get_cond_𝔼V(val, exo, 2, :z => 2))
+ plot!(a_grid_rent, Aiyagari.get_cond_𝔼V(val, exo, 3, :z => 3))
+
+scatter!(a_grid_rent, val)
+size(exo)
+size(exo_old)
+
+exo_old.mc.p
+keys(exo_old)
+
+Aiyagari.marginal_distribution(exo, :z)
+Aiyagari.marginal_distribution(exo_old, :z)
 plot(a_grid_rent, policies_full.w_next, title="house size", xlab="wealth", legend=:topleft)
 
 # ### Stationary distribution
