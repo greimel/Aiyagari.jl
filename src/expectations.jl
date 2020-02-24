@@ -1,7 +1,6 @@
 
 using Test, Aiyagari
 using QuantEcon, Parameters, Interpolations
-using Plots
 
 function marginal_distribution(exo, var)
   size_exo = size(exo)
