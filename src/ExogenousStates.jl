@@ -1,21 +1,27 @@
 module ExogenousStates
 
+using Parameters
 import QuantEcon: MarkovChain, stationary_distributions
 
-struct ExogenousStatespace{T1,T2,T3}
+struct ExogenousStatespace{T1,T2,T3,T4}
   grid::T1 # grid
-  mc::T2
-  dist::T3 # stationary distribution
+  size::T2
+  mc::T3
+  dist::T4 # stationary distribution
 end
 
-function ExogenousStatespace(mc1, mc2; names=(:s1, :s2))
-  grid = [NamedTuple{names}((s1, s2)) for (s1,s2) in Iterators.product(mc1.state_values, mc2.state_values)]
+Base.size(exo::ExogenousStatespace) = exo.size
+Base.keys(exo::ExogenousStatespace) = keys(exo.grid[1])
+QuantEcon.MarkovChain(exo::ExogenousStatespace) = exo.mc
+
+function ExogenousStatespace(vec_mc)
+  size = Tuple(length.(getproperty.(vec_mc, :state_values)))
+    
+  mc = product(vec_mc...)
   
-  mc = MarkovChain(mc1, mc2, names=names)
+  grid = mc.state_values
   
-  @assert all(vec(grid) .== mc.state_values)
-  
-  ExogenousStates(grid, mc, stationary_distributions(dist)[1])
+  ExogenousStatespace(grid, size, mc, stationary_distributions(mc)[1])
 end
 
 named_grid(grid, name) = NamedTuple{(name,)}.(Tuple.(grid))
@@ -53,7 +59,7 @@ function product(mc_vec...)
 end
 
 
-export product, ExogenousStatespace
+export ExogenousStatespace
 
 end  
 

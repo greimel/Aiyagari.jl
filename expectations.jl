@@ -24,16 +24,18 @@ x3_MC = MarkovChain(x3_prob, x3_grid, :x3)
 
 x123_MC = product(x1_MC, x2_MC, x3_MC)
 
+exo = ExogenousStatespace([x1_MC, x2_MC, x3_MC])
+
 size_exo = (2,4,3)
 states_reshaped = reshape(x123_MC.state_values, size_exo)
 states_reshaped_SA = StructArray(states_reshaped)
 
 
-function marginal_distribution(mc, var)
-  size_exo = (3,4,2)
-  p_reshaped = reshape(mc.p, (size_exo..., size_exo...))
+function marginal_distribution(exo, var)
+  size_exo = size(exo)
+  p_reshaped = reshape(exo.mc.p, (size_exo..., size_exo...))
   
-  names = keys(mc.state_values[1])
+  names = keys(exo)
   integrate_dim_bool = names .!= var
   
   n_dim = length(names)
