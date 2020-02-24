@@ -20,10 +20,18 @@ include("ExogenousStates.jl")
 include("expectations.jl")
 
 abstract type Household end
-struct Consumer <: Household end
-struct Owner <: Household end
-struct Renter <: Household end
+struct Consumer{T} <: Household
+  𝔼::T
+end
+struct Owner{T} <: Household
+  𝔼::T
+end
+struct Renter{T} <: Household
+  𝔼::T
+end
 struct OwnOrRent <: Household end
+
+𝔼(hh::Household) = hh.𝔼
 
 include("bellman.jl")
 include("stationary-distribution.jl")
