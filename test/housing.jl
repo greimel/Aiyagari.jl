@@ -5,7 +5,7 @@ using Test, Aiyagari
 using QuantEcon, Parameters, Interpolations
 using Plots
 
-u(c; γ=γ) = c^(1-γ) / (1-γ)
+u(c; γ) = c^(1-γ) / (1-γ)
 
 function u(c,h; ξ=0.8159, ρ=map(s -> (s-1)/s, 0.13), γ=2.0)
   C = (ξ * h^ρ + (1-ξ) * c^ρ)^(1/ρ)
@@ -21,12 +21,24 @@ z_MC = MarkovChain(z_prob, z_grid, :z)
 
 # Moving shocks
 move_grid = Symbol[:just_moved, :normal, :move]
+move_grid = [1, 2, 3]
 move_prob = [0.7 0.3 0.0;
           0.0 0.9 0.1;
           1.0 0.0 0.0]
 move_MC = MarkovChain(move_prob, move_grid, :move)
 
 exo = ExogenousStatespace([z_MC])
+exo1 = ExogenousStatespace([z_MC, move_MC])
+
+itp_scheme = BSpline(Cubic(Line(OnGrid())))
+a_grid = LinRange(0.0, 0.7, 50)
+
+val = u.(a_grid .+ permutedims([exo.z for exo in exo1.grid]), γ=2.0)
+
+𝔼V = extrapolated_𝔼V(a_grid, itp_scheme, val, exo1, 3, Aiyagari.Conditional(:move))
+
+𝔼V([1.0, 2.0, 0.7])
+
 
 mutable struct HousingAS{T1,T2,T3,T4} <: AggregateState
   r::T1
@@ -41,7 +53,7 @@ function HousingAS(r, p, a_grid, exo, param; ρ=p * (param.δ + r))
 end
 
 include("housing-simple-nlopt.jl")
-include("renting-nlopt.jl")
+#include("renting-nlopt.jl")
 #include("housing-simple-jump.jl")
 r = 0.29
 
@@ -49,14 +61,19 @@ r = 0.29
 r_own = 0.29
 a_grid_own = LinRange(0.0, 0.7, 50)
 param_own  = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = eps())
-agg_state_own = HousingAS(r_own, 2.2, a_grid_own, exo, param_own)
+agg_state_own = HousingAS(r_own, 2.2, a_grid_own, exo1, param_own)
   
-@unpack val, policy, policies_full = solve_bellman(a_grid_own, exo, agg_state_own, param_own, Owner())
+@unpack val, policy, policies_full = solve_bellman(a_grid_own, exo1, agg_state_own, param_own, Owner())
 
 
 using DelimitedFiles
 #writedlm("test/matrices/housing_simple_nlopt_value.txt", val)
 value_test = readdlm("test/matrices/housing_simple_nlopt_value.txt")
+
+for i in 1:length(z_grid)
+  Δ = maximum(abs, value_test[:,i] .- Aiyagari.get_cond_𝔼V(out1.val, exo1, i, :z => i))
+  @show Δ
+end
 
 @show all(value_test .≈ val) || maximum(abs, value_test .- val)
 
