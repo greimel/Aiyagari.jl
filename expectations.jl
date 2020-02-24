@@ -3,34 +3,6 @@ using Test, Aiyagari
 using QuantEcon, Parameters, Interpolations
 using Plots
 
-# Exogenous states (incomes)
-x1_grid = [0.5; 1.0; 1.5]
-x1_prob = [0.7 0.15 0.15;
-           0.2 0.6 0.2;
-           0.15 0.15 0.7]
-x1_MC = MarkovChain(x1_prob, x1_grid, :x1)
-
-x2_grid = [0.15; 1.1; 1.15; 3.0]
-x2_prob = [0.15 0.0 0.7  0.15;
-           0.6  0.2 0.0  0.2;
-           0.15 0.15 0.7 0.0;
-           0.6  0.2 0.0  0.2]
-x2_MC = MarkovChain(x2_prob, x2_grid, :x2)
-
-x3_grid = [0.3; 0.6]
-x3_prob = [0.7 0.3;
-           1.0 0.0]
-x3_MC = MarkovChain(x3_prob, x3_grid, :x3)
-
-x123_MC = product(x1_MC, x2_MC, x3_MC)
-
-exo = ExogenousStatespace([x1_MC, x2_MC, x3_MC])
-
-size_exo = (2,4,3)
-states_reshaped = reshape(x123_MC.state_values, size_exo)
-states_reshaped_SA = StructArray(states_reshaped)
-
-
 function marginal_distribution(exo, var)
   size_exo = size(exo)
   p_reshaped = reshape(exo.mc.p, (size_exo..., size_exo...))
@@ -49,52 +21,108 @@ function marginal_distribution(exo, var)
   dropdims(mean(sum_columns, dims=int_dim), dims=Tuple(int_dim))
 end
 
-all(marginal_distribution(x123_MC, :x1) .≈ x1_prob)
-all(marginal_distribution(x123_MC, :x2) .≈ x2_prob)
-all(marginal_distribution(x123_MC, :x3) .≈ x3_prob)
+@testset "marginal distribution" begin
+  # Exogenous states (incomes)
+  x1_grid = [0.5; 1.0; 1.5]
+  x1_prob = [0.7 0.15 0.15;
+             0.2 0.6 0.2;
+             0.15 0.15 0.7]
+  x1_MC = MarkovChain(x1_prob, x1_grid, :x1)
 
+  x2_grid = [0.15; 1.1; 1.15; 3.0]
+  x2_prob = [0.15 0.0 0.7  0.15;
+             0.6  0.2 0.0  0.2;
+             0.15 0.15 0.7 0.0;
+             0.6  0.2 0.0  0.2]
+  x2_MC = MarkovChain(x2_prob, x2_grid, :x2)
 
-sum_columns = dropdims(sum(p_reshaped, dims=[4,5]), dims=(4,5))
-sum_columns[:,:,:,1]
-dropdims(mean(sum_columns, dims=[1,2]), dims=(1,2))
+  x3_grid = [0.3; 0.6]
+  x3_prob = [0.7 0.3;
+             1.0 0.0]
+  x3_MC = MarkovChain(x3_prob, x3_grid, :x3)
 
-states_reshaped[1,1,Colon()]
+  exo = ExogenousStatespace([x1_MC, x2_MC, x3_MC])
 
-states_reshaped.x2[:,3,:]
-using StructArrays
-sum(states_reshaped, dims=[1,3])
-#function MarkovChain
-add_name(x2_MC, :x2)
+  @test all(marginal_distribution(exo, :x1) .≈ x1_prob)
+  @test all(marginal_distribution(exo, :x2) .≈ x2_prob)
+  @test all(marginal_distribution(exo, :x3) .≈ x3_prob)
+end
+
+states_reshaped = reshape(x123_MC.state_values, size(exo))
+states_reshaped_SA = StructArray(states_reshaped)
+
+## (Conditional) expectations of value functions
 
 # Moving shocks
-move_grid = Symbol[:just_moved, :move]
-move_prob = [0.7 0.3;
+exo = let
+  x1_grid = [0.5; 1.0; 1.5]
+  x1_prob = [0.7 0.15 0.15;
+             0.2 0.6 0.2;
+             0.15 0.15 0.7]
+  x1_MC = MarkovChain(x1_prob, x1_grid, :x1)
+
+  x2_grid = [0.15; 1.1; 1.15; 3.0]
+  x2_prob = [0.15 0.0 0.7  0.15;
+             0.6  0.2 0.0  0.2;
+             0.15 0.15 0.7 0.0;
+             0.6  0.2 0.0  0.2]
+  x2_MC = MarkovChain(x2_prob, x2_grid, :x2)
+
+  x3_grid = [0.3; 0.6]
+  x3_prob = [0.7 0.3;
              1.0 0.0]
-move_MC = MarkovChain(move_prob, move_grid)
+  x3_MC = MarkovChain(x3_prob, x3_grid, :x3)
 
-exo_MC = MarkovChain(x1_MC, move_MC, (:z, :move))
+  exo = ExogenousStatespace([x1_MC, x2_MC, x3_MC])
+end
 
-size_exo_ss = (length(x1_grid), length(move_grid))
 a_grid = LinRange(5, 10, 50)
 
 function my_val(a, exo)
-  c = a + exo.z - (exo.move == :move)
+  c = a + exo.x1 - (exo.x2 == 0.6)
   #c > 0 ? log(c) : 1 * c - 1
 end
 
-value = my_val.(a_grid, permutedims(exo_MC.state_values))
+value = my_val.(a_grid, permutedims(exo.grid))
 value
-value_reshaped = reshape(value, (length(a_grid), reverse(size_exo_ss)...))
 
-value_reshaped[:,1,:]
+function conditional_expected_value(value, exo, i_exo, condition)
+  len_endo = size(value,1)
+  
+  value_reshaped = reshape(value, (len_endo, size(exo)...))
+  
+  v = value_reshaped[:, [k == condition[1] ? condition[2] : Colon() for k in keys(exo)]...]
 
-i_state = (i_endo = 10, i_z = 3, i_move = 2)
+  oth_dim = keys(exo) .!= condition[1]
 
+  len_exo_other = prod(size(exo)[[oth_dim...]])
 
-cond_exp_value(i_move) = move_MC.p[i_move,1] * value_reshaped[:,1,:] + move_MC.p[i_move,2] * value_reshaped[:,2,:]
+  p = exo.mc.p
+  π_ = reshape(p[i_exo,:], size(exo))[[k == condition[1] ? condition[2] : Colon() for k in keys(exo)]...]
+  
+  ∑π = sum(π_)
+  π_ = ∑π == 0 ? π_ : π_ / ∑π
+   
+  reshape(v, (len_endo, len_exo_other)) * vec(π_)
+  
+end
 
-plot(cond_exp_value(1))
-plot!(cond_exp_value(2))
+i_exo = 5
 
-cond_exp_value(1) .- cond_exp_value(2)
+@testset "conditional expectation" begin
+  for i_exo in [1; 3; 5]
+    for (i_dim, cond_dim) in enumerate([:x1, :x2, :x3])
+      oth_dim = findall(keys(exo) .!= cond_dim)
+      π_sub = dropdims(sum(reshape(exo.mc.p[i_exo,:], size(exo)), dims=oth_dim), dims=Tuple(oth_dim))
+
+      𝔼V = mapreduce(+, 1:size(exo)[i_dim]) do x
+       conditional_expected_value(value, exo, i_exo, cond_dim => x) * π_sub[x]
+      end
+      
+      @show maximum(abs, 𝔼V .- value * exo.mc.p[i_exo,:])
+      @test all(𝔼V .≈ value * exo.mc.p[i_exo,:])
+    end
+  end
+end
+
 
