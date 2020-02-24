@@ -48,9 +48,6 @@ end
   @test all(marginal_distribution(exo, :x3) .≈ x3_prob)
 end
 
-states_reshaped = reshape(x123_MC.state_values, size(exo))
-states_reshaped_SA = StructArray(states_reshaped)
-
 ## (Conditional) expectations of value functions
 
 # Moving shocks
