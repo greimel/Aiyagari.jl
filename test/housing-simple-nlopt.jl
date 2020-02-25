@@ -21,9 +21,9 @@ end
 function objective0(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   @unpack β = params
   
-  w_next_ = w_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
+  w_next_ = w_next(c, h, states, agg_state, 𝔼V, params, hh)
 
-  u(c,h) + β * 𝔼V([w_next_, w_next_, w_next_])    
+  u(c,h) + β * 𝔼V(w_next_)    
 end
 
 function constraint0(c, h, states, agg_state, 𝔼V, params, hh::Owner)

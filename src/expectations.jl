@@ -48,7 +48,7 @@ function extrapolated_𝔼V(a_grid, itp_scheme, value, exo, i_exo, cond::Conditi
   
   𝔼V_itp = interpolate.(𝔼V0_vec, Ref(itp_scheme))
   
-  𝔼V = extrapolate.(
+  𝔼V_vec = extrapolate.(
           scale.(𝔼V_itp, Ref(a_grid)),
           Ref(Interpolations.Line())
         )
@@ -56,11 +56,18 @@ function extrapolated_𝔼V(a_grid, itp_scheme, value, exo, i_exo, cond::Conditi
   i_cond_var = exo.indices[i_exo][var]
 
   π = marginal_distribution(exo, var)[i_cond_var, :]
-
-  vec -> mapreduce(+, 1:n) do i
-    π[i] * 𝔼V[i](vec[i]) 
+  
+  function 𝔼V(vec::AbstractVector) 
+    mapreduce(+, 1:n) do i
+      π[i] * 𝔼V_vec[i](vec[i])
+    end 
   end  
-    
+  function 𝔼V(x::Number) 
+    mapreduce(+, 1:n) do i
+      π[i] * 𝔼V_vec[i](x)
+    end 
+  end
+  𝔼V
 end
 
 function get_cond_𝔼V(value, exo, i_exo, condition)
