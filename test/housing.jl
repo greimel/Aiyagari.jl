@@ -23,13 +23,11 @@ z_MC = MarkovChain(z_prob, z_grid, :z)
 move_grid = Symbol[:just_moved, :normal, :move]
 move_grid = [1, 2, 3]
 move_prob = [0.7 0.3 0.0;
-             0.0 0.9 0.1;
+             0.0 0.99 0.01;
              1.0 0.0 0.0]
 #move_prob = ones(3,3)/3
           
 move_MC = MarkovChain(move_prob, move_grid, :move)
-
-# exo = ExogenousStatespace([z_MC, move_MC])
 
 # itp_scheme = BSpline(Cubic(Line(OnGrid())))
 # a_grid = LinRange(0.0, 0.7, 50)

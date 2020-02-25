@@ -26,6 +26,14 @@ function objective0(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   u(c,h) + β * 𝔼V(w_next_)    
 end
 
+function objective0(c, h, states, agg_state, 𝔼V, params, hh::Owner{<:Aiyagari.Conditional})
+  @unpack β = params
+
+  w_next_ = w_next(c, h, states, agg_state, 𝔼V, params, hh)
+
+  u(c,h) + β * 𝔼V([w_next_, w_next_, w_next_ - 0.8 * agg_state.p * h])    
+end
+
 function constraint0(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   @unpack p, r = agg_state
   @unpack β, θ, δ = params
