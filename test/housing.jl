@@ -66,7 +66,38 @@ a_grid_own = LinRange(0.0, 0.7, 50)
 param_own  = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = eps())
 agg_state_own = HousingAS(r_own, 2.2, a_grid_own, exo, param_own)
   
-@unpack val, policy, policies_full = solve_bellman(a_grid_own, exo, agg_state_own, param_own, Owner(Aiyagari.Conditional(:move)))
+out_C = solve_bellman(a_grid_own, exo, agg_state_own, param_own, Owner(Aiyagari.Conditional(:move)), tol=1e-5)
+out_UC = solve_bellman(a_grid_own, exo, agg_state_own, param_own, Owner(Aiyagari.Unconditional()), tol=1e-5)
+out_U = solve_bellman(a_grid_own, exo_old, agg_state_own, param_own, Owner(Aiyagari.Unconditional()), tol=1e-6)
+
+@testset "conditional vs unconditional" begin
+  itp_scheme = BSpline(Cubic(Line(OnGrid())))
+  V_C = extrapolated_𝔼V(a_grid_own, itp_scheme, out_C.val, exo, 1, Aiyagari.Conditional(:move))
+  V_UC = extrapolated_𝔼V(a_grid_own, itp_scheme, out_C.val, exo, 1, Aiyagari.Unconditional())
+  V_UC_old = extrapolated_𝔼V(a_grid_own, itp_scheme, out_U.val, exo_old, 1, Aiyagari.Unconditional())
+
+  V_C_p(a) = ForwardDiff.derivative(V_C, a)
+  V_UC_p(a) = ForwardDiff.derivative(V_UC, a)
+  V_UC_old_p(a) = ForwardDiff.derivative(V_UC_old, a)
+
+
+  @test all(V_C.(a_grid_own) .≈ V_UC.(a_grid_own))
+  @test all(V_C_p.(a_grid_own) .≈ V_UC_p.(a_grid_own))
+
+  @show maximum(abs, V_UC.(a_grid_own) .- V_UC_old.(a_grid_own))
+  @show maximum(abs, V_UC_p.(a_grid_own) .- V_UC_old_p.(a_grid_own))
+
+
+  using Distributions
+  a_rand = rand(Uniform(0, 0.7), 500)
+  a_low = rand(Uniform(-5, 0), 500)
+  a_high = rand(Uniform(0.7, 5), 500)
+
+  @test all(V_C.(a_rand) .≈ V_UC.(a_rand))
+  @test all(V_C.(a_low) .≈ V_UC.(a_low))
+  @test all(V_C.(a_high) .≈ V_UC.(a_high))
+end
+
 
 using DelimitedFiles
 
@@ -120,22 +151,25 @@ plot(a_grid_rent, dist, xlab="wealth" )
 
 # ## Own big, rent small
 
-a_grid = LinRange(-√eps(), 1.5, 50)
-param_both = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = 0.6)
-agg_state_both = HousingAS(r, 2.2, a_grid, exo, param_both, ρ=2.2 * (param_both.δ + r) * 1.5)
+r = 0.15
+a_grid = LinRange(0.0, 1.0, 40)
+param_both = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = 0.75)
+agg_state_both = HousingAS(r, 2.2, a_grid, exo, param_both, ρ=2.2 * (param_both.δ + r))
 
 
-@unpack val, policy, policies_full, owner = solve_bellman(a_grid, exo, agg_state_both, param_both, OwnOrRent(), maxiter=200)
-
-policies_full[1].conv
-
-w_next_all = policies_full[1].w_next .* owner .+ policies_full[2].w_next .* .!owner
-h_all = policies_full[1].h .* owner .+ policies_full[2].h .* .!owner
-c_all = policies_full[1].c .* owner .+ policies_full[2].c .* .!owner
+@unpack val, policy, policies_full, owner = solve_bellman(a_grid, exo, agg_state_both, param_both, OwnOrRent(), maxiter=70)
 
 plot(a_grid, owner, title="Who owns?")
 
-plot(a_grid, h_all, legend=:topleft, title="House size")
+
+w_next_all = policies_full[1].w_next .* owner .+ policies_full[2].w_next .* .!owner
+ h_all = policies_full[1].h .* owner .+ policies_full[2].h .* .!owner
+ c_all = policies_full[1].c .* owner .+ policies_full[2].c .* .!owner
+
+ plot(a_grid, h_all, legend=false, title="House size")
+ hline!([param_both.h_thres], color=:gray, label="", linestyle=:dash)
+
+plot(a_grid, w_next_all, legend=false, title="wealth")
 
 # 
 
@@ -158,8 +192,6 @@ plot(a_grid, h_all, legend=:topleft, title="House size")
 # scatter(a_grid, policies_full[1].h)
 # scatter!(a_grid, policies_full[2].h)
 
-plot(a_grid, h_all, legend=:topleft, title="House size")
-hline!([param_both.h_thres], color=:gray, label="", linestyle=:dash)
 
 # scatter(a_grid, policies_full[1].m .* owner)
 # scatter(a_grid, c_all)
@@ -168,7 +200,7 @@ hline!([param_both.h_thres], color=:gray, label="", linestyle=:dash)
 
 # ## Stationary distribution 
 
-dist = stationary_distribution(z_MC, a_grid, w_next_all)
+dist = stationary_distribution(exo.mc, a_grid, w_next_all)
 plot(a_grid, dist, xlab="wealth" )
 
 # #writedlm("test/matrices/housing_simple_nlopt_dist.txt", dist)
