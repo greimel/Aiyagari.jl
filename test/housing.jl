@@ -152,20 +152,27 @@ plot(a_grid_rent, dist, xlab="wealth" )
 r = 0.15
 a_grid = LinRange(0.0, 1.0, 40)
 param_both = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = 0.75)
-agg_state_both = HousingAS(r, 2.2, a_grid, exo, param_both, ρ=2.2 * (param_both.δ + r))
+param = [param_own, param_rent]
+agg_state_both = HousingAS(r, 2.2, a_grid, exo, param_both, ρ= 1.05 * 2.2 * (param_both.δ + r))
 
 
-@unpack val, policy, policies_full, owner = solve_bellman(a_grid, exo, agg_state_both, param_both, OwnOrRent(), maxiter=70)
+ @unpack val, policy, policies_full, owner = solve_bellman(a_grid, exo, agg_state_both, param, OwnOrRent(), maxiter=70)
 
-plot(a_grid, owner, title="Who owns?")
+   plot(a_grid, owner, title="Who owns?")
 
+using StructArrays
+move = StructArray(exo.grid).move
+move_long = repeat(permutedims(move), 40, 1)
 
 w_next_all = policies_full[1].w_next .* owner .+ policies_full[2].w_next .* .!owner
  h_all = policies_full[1].h .* owner .+ policies_full[2].h .* .!owner
  c_all = policies_full[1].c .* owner .+ policies_full[2].c .* .!owner
 
- plot(a_grid, h_all, legend=false, title="House size")
- hline!([param_both.h_thres], color=:gray, label="", linestyle=:dash)
+scatter(a_grid, h_all .* (owner .== 1), color=:blue, legend=:false, title="House size")
+scatter!(a_grid, h_all .* (owner .== 0), color=:red)
+
+ylims!(0.3, 1.25)
+hline!([param_both.h_thres], color=:gray, label="", linestyle=:dash)
 
 plot(a_grid, w_next_all, legend=false, title="wealth")
 
