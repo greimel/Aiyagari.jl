@@ -111,7 +111,7 @@ export extrapolated_𝔼V
              1.0 0.0]
   x3_MC = MarkovChain(x3_prob, x3_grid, :x3)
 
-  exo = ExogenousStatespace([x1_MC, x2_MC, x3_MC])
+  exo = ExogenousStateSpace([x1_MC, x2_MC, x3_MC])
 
   @testset "marginal distribution" begin
     @test all(marginal_distribution(exo, :x1) .≈ x1_prob)

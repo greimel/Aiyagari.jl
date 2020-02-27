@@ -3,7 +3,15 @@ module ExogenousStates
 using Parameters
 import QuantEcon: MarkovChain, stationary_distributions
 
-struct ExogenousStatespace{T1,T2,T3,T4,T5}
+abstract type StateSpace end
+
+struct EndogenousStateSpace{T1,T2,T3} <: StateSpace
+  grid::T1 # grid
+  indices::T2
+  size::T3
+end
+
+struct ExogenousStateSpace{T1,T2,T3,T4,T5} <: StateSpace
   grid::T1 # grid
   indices::T2
   size::T3
@@ -11,12 +19,48 @@ struct ExogenousStatespace{T1,T2,T3,T4,T5}
   dist::T5 # stationary distribution
 end
 
-Base.size(exo::ExogenousStatespace) = exo.size
-Base.length(exo::ExogenousStatespace) = prod(size(exo))
-Base.keys(exo::ExogenousStatespace) = keys(exo.grid[1])
-MarkovChain(exo::ExogenousStatespace) = exo.mc
+Base.size(ss::StateSpace) = ss.size
+Base.length(ss::StateSpace) = prod(size(ss))
+Base.keys(ss::StateSpace) = keys(ss.grid[1])
+MarkovChain(exo::ExogenousStateSpace) = exo.mc
 
-function ExogenousStatespace(vec_mc)
+function EndogenousStateSpace(grids_nt::NamedTuple)
+  keys_ = keys(grids_nt)
+  
+  size_ = Tuple(length.(collect(grids_nt)))
+  
+  grid0 = Iterators.product(grids_nt...)
+  gridNT = NamedTuple{keys_}.(grid0)
+  
+  indices0 = Iterators.product([1:n for n in size_]...)
+  indicesNT = NamedTuple{keys_}.(indices0)
+  
+  EndogenousStateSpace(gridNT, indicesNT, size_)
+   
+end
+
+using Test
+
+@testset "Endogenous state space" begin
+  a_min = 0.0
+  h_min = eps()
+  
+  a = LinRange(a_min, 7.5, 10)
+  h = LinRange(h_min, 5.0, 15)
+
+  endo = EndogenousStateSpace((a=a, h=h))
+  
+  @test size(endo) == (10, 15)
+  @test length(endo) == 10 * 15
+  @test keys(endo) == (:a, :h)
+  @test endo.grid[1,1] == (a=a_min, h=h_min)
+  @test endo.grid[5,7] == (a=a[5], h=h[7])
+  @test endo.indices[3,14] == (a=3, h=14)
+end
+
+
+
+function ExogenousStateSpace(vec_mc)
   size = Tuple(length.(getproperty.(vec_mc, :state_values)))
     
   mc = product(vec_mc...)
@@ -26,7 +70,7 @@ function ExogenousStatespace(vec_mc)
   indices0 = collect(Iterators.product([1:n for n in size]...))
   indicesNT = NamedTuple{keys(grid[1])}.(indices0)
   
-  ExogenousStatespace(grid, indicesNT, size, mc, stationary_distributions(mc)[1])
+  ExogenousStateSpace(grid, indicesNT, size, mc, stationary_distributions(mc)[1])
 end
 
 named_grid(grid, name) = NamedTuple{(name,)}.(Tuple.(Ref.(grid)))
@@ -64,7 +108,7 @@ function product(mc_vec...)
 end
 
 
-export ExogenousStatespace
+export EndogenousStateSpace, ExogenousStateSpace
 
 end  
 

@@ -55,8 +55,8 @@ include("renting-nlopt.jl")
 #include("housing-simple-jump.jl")
 r = 0.29
 
-exo_old = ExogenousStatespace([z_MC])
-exo = ExogenousStatespace([z_MC, move_MC])
+exo_old = ExogenousStateSpace([z_MC])
+exo = ExogenousStateSpace([z_MC, move_MC])
 
 # ## Forever home owners
 r_own = 0.29
