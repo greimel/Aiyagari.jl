@@ -27,18 +27,18 @@ struct Conditional <: Expectation
   var::Symbol
 end
 
-function extrapolated_𝔼V(a_grid, itp_scheme, value, exo, i_exo, ::Unconditional)
+function extrapolated_𝔼V(endo, itp_scheme, value, exo, i_exo, ::Unconditional)
   𝔼V0 = value * exo.mc.p[i_exo,:]
   
   𝔼V_itp = interpolate(𝔼V0, itp_scheme)
 
   𝔼V = extrapolate(
-          scale(𝔼V_itp, a_grid),
+          scale(𝔼V_itp, Tuple(endo.grids)),
           Interpolations.Line()
           )
 end
 
-function extrapolated_𝔼V(a_grid, itp_scheme, value, exo, i_exo, cond::Conditional)
+function extrapolated_𝔼V(endo, itp_scheme, value, exo, i_exo, cond::Conditional)
   var = cond.var
   n = size(exo)[findfirst(keys(exo) .== var)]
   
@@ -49,7 +49,7 @@ function extrapolated_𝔼V(a_grid, itp_scheme, value, exo, i_exo, cond::Conditi
   𝔼V_itp = interpolate.(𝔼V0_vec, Ref(itp_scheme))
   
   𝔼V_vec = extrapolate.(
-          scale.(𝔼V_itp, Ref(a_grid)),
+          scale.(𝔼V_itp, Ref(Tuple(endo.grids)),
           Ref(Interpolations.Line())
         )
         
