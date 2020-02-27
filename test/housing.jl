@@ -51,22 +51,25 @@ function HousingAS(r, p, a_grid, exo, param; ρ=p * (param.δ + r))
 end
 
 include("housing-simple-nlopt.jl")
+include("housing-nlopt.jl")
 include("renting-nlopt.jl")
 #include("housing-simple-jump.jl")
 r = 0.29
 
-exo_old = ExogenousStateSpace([z_MC])
+exo = ExogenousStateSpace([z_MC])
 exo = ExogenousStateSpace([z_MC, move_MC])
 
 # ## Forever home owners
 r_own = 0.29
 a_grid_own = LinRange(0.0, 0.7, 50)
+h_grid_own = LinRange(eps(), 2, 10)
+endo = EndogenousStateSpace((w=a_grid_own, h=h_grid_own))
 param_own  = (β = 0.7, θ = 0.9, δ = 0.1, h_thres = eps())
 agg_state_own = HousingAS(r_own, 2.2, a_grid_own, exo, param_own)
   
 out_C = solve_bellman(a_grid_own, exo, agg_state_own, param_own, Owner(Aiyagari.Conditional(:move)), tol=1e-5)
 out_UC = solve_bellman(a_grid_own, exo, agg_state_own, param_own, Owner(Aiyagari.Unconditional()), tol=1e-5)
-out_U = solve_bellman(a_grid_own, exo_old, agg_state_own, param_own, Owner(Aiyagari.Unconditional()), tol=1e-6)
+out_U = solve_bellman(endo, exo, agg_state_own, param_own, Owner(Aiyagari.Unconditional()), tol=2e-5)
 
 @testset "conditional vs unconditional" begin
   itp_scheme = BSpline(Cubic(Line(OnGrid())))
@@ -111,8 +114,11 @@ end
 
 #@show all(value_test .≈ val) || maximum(abs, value_test .- val)
 
-plot(a_grid_own, policies_full.h, title="house size", xlab="wealth", legend=:topleft)
+hh = reshape(out_U.policies_full.h, (size(endo)..., length(exo)))
 
+plot(a_grid_own, hh, title="house size", xlab="wealth", legend=:false)
+plot(h_grid_own, reshape(permutedims(hh, (2,1,3)), (10,150)), title="house size", xlab="wealth", legend=:false, alpha=0.3)
+ ylims!(0,2)
 # 
 
 #plot(a_grid_own, policies_full.m, title="mortgage", xlab="wealth")

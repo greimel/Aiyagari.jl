@@ -1,19 +1,17 @@
 using NLopt
 using ForwardDiff
 
-function w_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
+function w_next(c, h_next, states, agg_state, 𝔼V, params, hh::Owner)
   @unpack p, r = agg_state
   @unpack δ = params
-  @unpack z = states
-  w = states.a
+  @unpack z, w, h = states
      
-  w_next = w + z - c - p * h * (r + δ)
+  w_next = w + z - c - p * h_next * (r + δ) + 0.1 * p * h * (h_next != h)
 end
 
 function m_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   @unpack p = agg_state
-  @unpack z = states
-  w = states.a
+  @unpack z, w = states
   
   m = p * h + c - z - w
 end
@@ -55,8 +53,7 @@ function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid, hh::Owne
   
   # 1. check if feasible set is non-empty
   h_max = let
-    w = states.a
-    @unpack z = states
+    @unpack z, w = states
     @unpack δ, θ = params
     @unpack p, r = agg_state
     
@@ -81,7 +78,7 @@ function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid, hh::Owne
     max_objective!(opt, (x,g) -> objective_nlopt(x, g, states, agg_state, 𝔼V, params, hh))
     inequality_constraint!(opt, (x,g) -> constraint_nlopt(x, g, states, agg_state, 𝔼V, params, hh), 1e-8)
     
-    guess = (states.a + states.z)/2
+    guess = (states.w + states.z)/2
     #guesses = [guess, guess / agg_state.p]
     guesses = [guess/10, max(guess / agg_state.p, params.h_thres)]
     (max_f, max_x, ret) = optimize(opt, guesses)
