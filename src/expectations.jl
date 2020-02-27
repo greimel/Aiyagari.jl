@@ -30,10 +30,10 @@ end
 function extrapolated_𝔼V(endo, itp_scheme, value, exo, i_exo, ::Unconditional)
   𝔼V0 = value * exo.mc.p[i_exo,:]
   
-  𝔼V_itp = interpolate(𝔼V0, itp_scheme)
+  𝔼V_itp = interpolate(reshape(𝔼V0, size(endo)), itp_scheme)
 
   𝔼V = extrapolate(
-          scale(𝔼V_itp, Tuple(endo.grids)),
+          scale(𝔼V_itp, Tuple(endo.grids)...),
           Interpolations.Line()
           )
 end
@@ -49,7 +49,7 @@ function extrapolated_𝔼V(endo, itp_scheme, value, exo, i_exo, cond::Condition
   𝔼V_itp = interpolate.(𝔼V0_vec, Ref(itp_scheme))
   
   𝔼V_vec = extrapolate.(
-          scale.(𝔼V_itp, Ref(Tuple(endo.grids)),
+          scale.(𝔼V_itp, Ref(Tuple(endo.grids))),
           Ref(Interpolations.Line())
         )
         

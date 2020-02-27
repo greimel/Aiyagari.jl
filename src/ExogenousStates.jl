@@ -63,12 +63,12 @@ end
 
 
 function ExogenousStateSpace(vec_mc)
-  size = Tuple(length.(getproperty.(vec_mc, :state_values)))
+  grids = getproperty.(vec_mc, :state_values)
+  size = Tuple(length.(grids))
     
   mc = product(vec_mc...)
   
   grid = mc.state_values
-  grids = get_property.(vec_mc, Ref(state_values))
   
   indices0 = collect(Iterators.product([1:n for n in size]...))
   indicesNT = NamedTuple{keys(grid[1])}.(indices0)
