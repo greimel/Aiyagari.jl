@@ -20,14 +20,14 @@ include("ExogenousStates.jl")
 include("expectations.jl")
 
 abstract type Household end
-struct Consumer{T} <: Household
-  𝔼::T
+@with_kw struct Consumer{T} <: Household
+  𝔼::T = Unconditional()
 end
 struct Owner{T} <: Household
   𝔼::T
 end
-struct Renter{T} <: Household
-  𝔼::T
+@with_kw struct Renter{T} <: Household
+  𝔼::T = Unconditional()
 end
 struct OwnOrRent <: Household end
 
