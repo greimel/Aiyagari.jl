@@ -45,4 +45,6 @@ export Household, Owner, Renter, Consumer, OwnOrRent
 
 export MarkovChain
 
+examples = ["huggett"]
+
 end # module
