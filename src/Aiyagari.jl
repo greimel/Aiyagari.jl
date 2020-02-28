@@ -29,7 +29,10 @@ end
 @with_kw struct Renter{T} <: Household
   𝔼::T = Unconditional()
 end
-struct OwnOrRent <: Household end
+struct OwnOrRent{O<:Owner,R<:Renter} <: Household
+  owner::O
+  renter::R
+end
 
 𝔼(hh::Household) = hh.𝔼
  

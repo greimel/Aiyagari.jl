@@ -3,10 +3,10 @@ using ForwardDiff
 
 function a_next(c, h, states, agg_state, 𝔼V, params, hh::Renter)
   @unpack ρ, r = agg_state
-  a = states.a
-  y = states.z
+  @unpack w, z = states
+  a = w
   
-  a_next = (1+r) * (a + y - c - ρ * h)
+  a_next = (1+r) * (a + z - c - ρ * h)
 end
 
 function objective0(c, h, states, agg_state, 𝔼V, params, hh::Renter)
@@ -59,7 +59,7 @@ function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid, hh::Rent
   max_objective!(opt, (x,g) -> objective_nlopt(x, g, states, agg_state, 𝔼V, params, hh))
   inequality_constraint!(opt, (x,g) -> constraint_nlopt(x, g, states, agg_state, 𝔼V, params, hh), eps())
     
-  guess = (states.a + states.z)/2
+  guess = (states.w + states.z)/2
   (max_f, max_x, ret) = optimize(opt, [guess, min(guess / agg_state.ρ, params.h_thres)])
 
   val = max_f

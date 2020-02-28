@@ -5,8 +5,8 @@ function solve_bellman(endo, exo, aggregate_state, params, hh::OwnOrRent; maxite
   value_new = zeros(size(value_old))
   owner = trues(size(value_old))
     
-  proto_own  = proto_policy(endo, exo, value_new, aggregate_state, params[1], Owner(Conditional(:move)))
-  proto_rent = proto_policy(endo, exo, value_new, aggregate_state, params[2], Renter(Unconditional()))
+  proto_own  = proto_policy(endo, exo, value_new, aggregate_state, params[1], hh.owner)
+  proto_rent = proto_policy(endo, exo, value_new, aggregate_state, params[2], hh.renter)
   
   proto_pol = [proto_own.proto_pol, proto_rent.proto_pol]
   proto_pol_full = [proto_own.proto_pol_full, proto_rent.proto_pol_full]
@@ -37,10 +37,10 @@ function solve_bellman!(value_old, value_new, policy, policies_full, owner, endo
   prog = ProgressThresh(tol, "Solving Bellman equation")
   for i in 1:maxiter
     # own
-    iterate_bellman!(value_own, value_old, policy[1], policies_full[1], endo, exo, converged[1], aggregate_state, params[1], Owner(Conditional(:move)))
+    iterate_bellman!(value_own, value_old, policy[1], policies_full[1], endo, exo, converged[1], aggregate_state, params[1], hh.owner)
 
     # rent
-    iterate_bellman!(value_rent, value_old, policy[2], policies_full[2], endo, exo, converged[2], aggregate_state, params[2], Renter(Unconditional()))
+    iterate_bellman!(value_rent, value_old, policy[2], policies_full[2], endo, exo, converged[2], aggregate_state, params[2], hh.renter)
     
     owner .= value_own .> value_rent
     value_new .= max.(value_own, value_rent)
