@@ -89,7 +89,7 @@ function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid, hh::Owne
     guess = (states.w + states.z)/2
     #guesses = [guess, guess / agg_state.p]
     guesses = [guess/10, max(guess / agg_state.p, params.h_thres)]
-    (max_f, max_x, ret) = optimize(opt, guesses)
+    (max_f, max_x, ret) = NLopt.optimize(opt, guesses)
 
     val = max_f
     c, h = max_x

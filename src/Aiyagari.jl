@@ -48,6 +48,6 @@ export Household, Owner, Renter, Consumer, OwnOrRent
 
 export MarkovChain
 
-examples = ["huggett"]
+examples = ["huggett", "housing"]
 
 end # module

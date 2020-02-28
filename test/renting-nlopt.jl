@@ -60,7 +60,7 @@ function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid, hh::Rent
   inequality_constraint!(opt, (x,g) -> constraint_nlopt(x, g, states, agg_state, 𝔼V, params, hh), eps())
     
   guess = (states.w + states.z)/2
-  (max_f, max_x, ret) = optimize(opt, [guess, min(guess / agg_state.ρ, params.h_thres)])
+  (max_f, max_x, ret) = NLopt.optimize(opt, [guess, min(guess / agg_state.ρ, params.h_thres)])
 
   val = max_f
   c, h = max_x
