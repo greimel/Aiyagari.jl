@@ -32,7 +32,7 @@ end
 struct OwnOrRent <: Household end
 
 𝔼(hh::Household) = hh.𝔼
-
+ 
 include("bellman.jl")
 include("stationary-distribution.jl")
 include("aggregate-state.jl")

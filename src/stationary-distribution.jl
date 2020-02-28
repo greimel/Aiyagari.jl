@@ -1,6 +1,6 @@
-"""
-  Given a ordered vector [x_1 < x_2 < ... < x_N] and y ∈ [x_1, x_N] find i and λ such that y = λ x_i + (1-λ) x_{i+1}
-"""
+# """
+#   Given a ordered vector [x_1 < x_2 < ... < x_N] and y ∈ [x_1, x_N] find i and λ such that y = λ x_i + (1-λ) x_{i+1}
+# """
 function findneighbours(vector, point)
   i_next = searchsortedfirst(vector, point)
   
@@ -18,9 +18,6 @@ function findneighbours(vector, point)
 
   (i_prev=i_prev, i_next=i_next, λ=λ)
 end
-
-
-using Test
 
 let a_grid = LinRange(1, 10, 100), p = 7.23456
   @unpack i_prev, i_next, λ = findneighbours(a_grid, p)
@@ -101,3 +98,16 @@ function stationary_distribution(z_mc, a_grid, policy)
   reshape(dist, size(policy))
 end
 
+# let value = value, policy=policy, z_mc = z_MC
+#   lin_ind = LinearIndices(size(value))
+# 
+#   ngp_exo = length(z_mc.state_values)
+#   n = length(policy)
+#   len = n * ngp_exo * 2
+# 
+#   I = zeros(Int, len)
+#   J = zeros(Int, len)
+#   V = zeros(len)
+# 
+#   @btime Aiyagari.controlled_markov_chain!($I, $J, $V, $lin_ind, $z_mc, $a_grid, $policy)
+# end

@@ -10,3 +10,5 @@ tex/auto/
 *.out
 
 *.ipynb
+
+docs/build/
