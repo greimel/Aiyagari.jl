@@ -12,3 +12,9 @@ tex/auto/
 *.ipynb
 
 docs/build/
+
+test/generated/
+
+docs/src/tutorials/
+
+docs/tutorials/figures/

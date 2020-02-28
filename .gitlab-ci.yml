@@ -11,6 +11,7 @@ pages:
     - julia --project=docs -e '
           using Pkg;
           Pkg.develop(PackageSpec(path=pwd()));
+          Pkg.develop(PackageSpec(url="https://github.com/greimel/LiterateWeave.jl.git"));
           Pkg.instantiate();
           include("docs/make.jl");'
     - mkdir -p public
