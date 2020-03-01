@@ -19,13 +19,18 @@ include("ExogenousStates.jl")
 
 include("expectations.jl")
 
+abstract type HouseState end
+struct IsState <: HouseState end
+struct NoState <: HouseState end
+
 abstract type Household end
 @with_kw struct Consumer{T} <: Household
   𝔼::T = Unconditional()
 end
 
-@with_kw struct Owner{T} <: Household
-  𝔼::T = Unconditional()
+@with_kw struct Owner{T1,T2<:HouseState} <: Household
+  𝔼::T1 = Unconditional()
+  state::T2 = NoState()
 end
 
 @with_kw struct Renter{T} <: Household
@@ -47,6 +52,7 @@ export solve_bellman
 export controlled_markov_chain, stationary_distribution
 export AggregateState
 export Household, Owner, Renter, Consumer, OwnOrRent
+export HouseState, IsState, NoState
 
 export MarkovChain
 

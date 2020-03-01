@@ -1,13 +1,22 @@
 using NLopt
 using ForwardDiff
 
-function w_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
+function w_next(c, h, states, agg_state, 𝔼V, params, hh::Owner, s::NoState=hh.state)
   @unpack p, r = agg_state
   @unpack δ = params
   @unpack z, w = states
      
   w_next = w + z - c - p * h * (r + δ)
 end
+
+function w_next(c, h_next, states, agg_state, 𝔼V, params, hh::Owner, s::IsState=hh.state)
+  @unpack p, r = agg_state
+  @unpack δ = params
+  @unpack z, w, h = states
+     
+  w_next = w + z - c - p * h_next * (r + δ) #+ 0.1 * p * h * (h_next != h)
+end
+
 
 function m_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   @unpack p = agg_state
@@ -16,21 +25,29 @@ function m_next(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   m = p * h + c - z - w
 end
 
-function objective0(c, h, states, agg_state, 𝔼V, params, hh::Owner)
+function objective0(c, h, states, agg_state, 𝔼V, params, hh::Owner, ::NoState)
   @unpack β = params
   
-  w_next_ = w_next(c, h, states, agg_state, 𝔼V, params, hh)
+  w_next_ = w_next(c, h, states, agg_state, 𝔼V, params, hh, hh.state)
 
   u(c,h) + β * 𝔼V(w_next_)    
 end
 
-function objective0(c, h, states, agg_state, 𝔼V, params, hh::Owner{<:Aiyagari.Conditional})
+function objective0(c, h, states, agg_state, 𝔼V, params, hh::Owner, ::IsState)
   @unpack β = params
+  
+  w_next_ = w_next(c, h, states, agg_state, 𝔼V, params, hh, hh.state)
 
-  w_next_ = w_next(c, h, states, agg_state, 𝔼V, params, hh)
-
-  u(c,h) + β * 𝔼V([w_next_, w_next_, w_next_ - 0.8 * agg_state.p * h])    
+  u(c,h) + β * 𝔼V(w_next_, h)    
 end
+
+# function objective0(c, h, states, agg_state, 𝔼V, params, hh::Owner{<:Aiyagari.Conditional})
+#   @unpack β = params
+# 
+#   w_next_ = w_next(c, h, states, agg_state, 𝔼V, params, hh)
+# 
+#   u(c,h) + β * 𝔼V([w_next_, w_next_, w_next_ - 0.8 * agg_state.p * h])    
+# end
 
 function constraint0(c, h, states, agg_state, 𝔼V, params, hh::Owner)
   @unpack p, r = agg_state
@@ -83,7 +100,7 @@ function Aiyagari.get_optimum(states, agg_state, 𝔼V, params, a_grid, hh::Owne
     
     maxeval!(opt, 250)
     
-    max_objective!(opt, (x,g) -> objective_nlopt(x, g, states, agg_state, 𝔼V, params, hh))
+    max_objective!(opt, (x,g) -> objective_nlopt(x, g, states, agg_state, 𝔼V, params, hh, hh.state))
     inequality_constraint!(opt, (x,g) -> constraint_nlopt(x, g, states, agg_state, 𝔼V, params, hh), 1e-12)
     
     guess = (states.w + states.z)/2
