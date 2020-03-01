@@ -1,6 +1,8 @@
 using NLopt
 using ForwardDiff
 
+χ(h_prev, h, ::NoAdjustmentCosts) = zero(h_prev)
+
 function w_next(c, h, states, agg_state, 𝔼V, params, hh::Owner, s::NoState=hh.state)
   @unpack p, r = agg_state
   @unpack δ = params
@@ -14,7 +16,7 @@ function w_next(c, h_next, states, agg_state, 𝔼V, params, hh::Owner, s::IsSta
   @unpack δ = params
   @unpack z, w, h = states
      
-  w_next = w + z - c - p * h_next * (r + δ) #+ 0.1 * p * h * (h_next != h)
+  w_next = w + z - c - p * h_next * (r + δ) - χ(h, h_next, hh.adj)
 end
 
 

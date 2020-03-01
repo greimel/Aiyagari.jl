@@ -23,6 +23,10 @@ abstract type HouseState end
 struct IsState <: HouseState end
 struct NoState <: HouseState end
 
+abstract type AdjustmentCosts end
+
+struct NoAdjustmentCosts <: AdjustmentCosts end
+
 abstract type Household end
 abstract type CoupledHouseholds end
 
@@ -30,9 +34,10 @@ abstract type CoupledHouseholds end
   𝔼::T = Unconditional()
 end
 
-@with_kw struct Owner{T1,T2<:HouseState} <: Household
+@with_kw struct Owner{T1,T2<:HouseState,T3 <: AdjustmentCosts} <: Household
   𝔼::T1 = Unconditional()
   state::T2 = NoState()
+  adj::T3 = NoAdjustmentCosts()
 end
 
 @with_kw struct Renter{T} <: Household
@@ -59,7 +64,7 @@ export controlled_markov_chain, stationary_distribution
 export AggregateState
 export Household, Owner, Renter, Consumer, OwnOrRent
 export HouseState, IsState, NoState
-
+export AdjustmentCosts, NoAdjustmentCosts
 export MarkovChain
 
 examples = ["huggett", "housing", "morestates"]
