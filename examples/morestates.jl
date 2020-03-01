@@ -4,8 +4,7 @@ using Revise #src
 using Test #jl
 using Aiyagari
 using QuantEcon, Parameters
-using Plots #src
-#md using Plots
+using Plots #md
 
 PKG_HOME = joinpath(dirname(pathof(Aiyagari)), "..")
 
@@ -81,16 +80,16 @@ agg_state22 = HousingAS(r, p, endo2, exo2, param)
 
 # Check if results are the same
 val11 = out11.val
-#md plt11 = plot(w_grid, val11, alpha=0.35, title="no redundant states")
+plt11 = plot(w_grid, val11, alpha=0.35, title="no redundant states") #md
 
-#md plt21 = plot!(plt11, legend=false, title="redundant endogenous state")
+plt21 = plot!(plt11, legend=false, title="redundant endogenous state") #md
 @testset "irrelevant endogenous state" begin #jl
   val21 = reshape(out21.val, (size(endo2)..., length(exo1)))
   let #jl
     max_diff = Inf #jl
     for i_h in 1:length(h_grid)
       val_i = val21[:,i_h,:]
-#md   plot!(plt21, w_grid, val_i, alpha = 0.35 / length(h_grid))
+      plot!(plt21, w_grid, val_i, alpha = 0.35 / length(h_grid)) #md
       @test all(val11 .≈ val_i) #jl
       max_i = maximum(abs, val11 .- val_i) #jl
       max_diff = max_diff < max_i ? max_diff : max_i  #jl
@@ -113,17 +112,17 @@ end #jl
     println(max_diff) #jl
   end #jl
 end #jl
-#md plt12 = plot!(plt11, w_grid, out12.val, alpha=0.35, legend=false, title="redundant exogenous state")
+plt12 = plot!(plt11, w_grid, out12.val, alpha=0.35, legend=false,  title="redundant exogenous state") #md
 
-#md plt22 = plot!(plt11, legend=false, title="redundant endo + exo state") 
+plt22 = plot!(plt11, legend=false, title="redundant endo + exo state")  #md
 @testset "irrelevant endogenous and exogenous states" begin #jl
    val22 = reshape(out22.val, (size(endo2)..., size(exo2)...))
-  let #jl
-    max_diff = Inf #jl
+   let #jl
+     max_diff = Inf #jl
      for i_x in 1:length(x_grid)
        for i_h in 1:length(h_grid)
         val_i = val22[:,i_h,:,i_x]
-#md     plot!(plt22, w_grid, val_i, alpha = 0.35 / length(x_grid) / length(h_grid))
+        plot!(plt22, w_grid, val_i, alpha = 0.35 / length(x_grid) / length(h_grid)) #md
         @test all(val11 .≈ val_i) #jl
         max_i = maximum(abs, val11 .- val_i) #jl
         max_diff = max_diff < max_i ? max_diff : max_i  #jl
@@ -133,14 +132,14 @@ end #jl
   end #jl
 end #jl
 
-#md display(plt11)
+display(plt11) #md
 #-
-#md display(plt12)
+display(plt12) #md
 #-
-#md display(plt21)
+display(plt21) #md
 #-
-#md display(plt22)
-##md plot(plt11, plt12, plt21, plt22)
+display(plt22) #md
+#plot(plt11, plt12, plt21, plt22) #md
 
 
 # TODO: simple (linear or binary adjustment costs)
