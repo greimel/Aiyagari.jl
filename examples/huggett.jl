@@ -110,7 +110,7 @@ plot(a_grid, policies_full.c) #md
 #   @btime Aiyagari.controlled_markov_chain!($I, $J, $V, $lin_ind, $z_mc, $a_grid, $policy)
 # end
 
-dist = stationary_distribution(z_MC, a_grid, policy)
+dist = stationary_distribution(endo, exo, policy)
 #926 μs
 
 #writedlm("test/matrices/huggett_dist.txt", dist) #src
@@ -123,7 +123,7 @@ function excess_demand(r)
   agg_state = HuggettAS(r, a_grid, z_MC)
   @unpack val, policy, policies_full = solve_bellman(endo, exo, agg_state, param, Consumer(), rtol=√eps())
 
-  dist = stationary_distribution(z_MC, a_grid, policy)
+  dist = stationary_distribution(endo, exo, policy)
 
   sum(dist .* policies_full.a_next)
 end

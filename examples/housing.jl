@@ -57,7 +57,7 @@ agg_state_own = HousingAS(r_own, p_own, w_grid_own, exo, param_own)
 
 @unpack policies_full, val = solve_bellman(endo_own, exo, agg_state_own, param_own, Owner(), rtol=√eps())
 
-dist = stationary_distribution(exo.mc, endo_own.grids.w, policies_full.w_next)
+dist = stationary_distribution(endo_own, exo, policies_full.w_next)
 
 using DelimitedFiles #jl
 
@@ -93,7 +93,7 @@ function excess_demand(r, p)
 
   @unpack policies_full, val = solve_bellman(endo_own, exo, agg_state_own, param_own, Owner(), rtol=√eps())
 
-  dist = stationary_distribution(z_MC, w_grid_own, policies_full.w_next)
+  dist = stationary_distribution(endo_own, exo, policies_full.w_next)
 
   (m = sum(dist .* policies_full.m), h=sum(dist .* policies_full.h))
 end
@@ -119,7 +119,7 @@ function excess_demand(r, p, endo, exo, param, hh; maxiter_bellman=200)
   
   w_next_all = combined_policies(policies_full, owner, :w_next)
   
-  dist = stationary_distribution(exo.mc, w_grid, w_next_all)
+  dist = stationary_distribution(endo, exo, w_next_all)
   a_all = combined_policies(policies_full, owner, :m, :w_next, f_own = x -> -x)
   h_all = combined_policies(policies_full, owner, :h)
   
