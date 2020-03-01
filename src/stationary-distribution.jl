@@ -41,7 +41,7 @@ let a_grid = LinRange(1, 10, 100), p = 7.23456
 end
 
 ## Build up transition matrix
-function controlled_markov_chain(exo, endo, policy)
+function controlled_markov_chain(endo, exo, policy)
   lin_ind = LinearIndices((length(endo), length(exo)))
 
   len_exo = length(exo)
@@ -55,12 +55,12 @@ function controlled_markov_chain(exo, endo, policy)
   J = zeros(Int, len_sparse)
   V = zeros(len_sparse)
 
-  controlled_markov_chain!(I, J, V, lin_ind, exo, endo, policy)
+  controlled_markov_chain!(I, J, V, lin_ind, endo, exo, policy)
   
   (I=I, J=J, V=V, n=len)
 end
 
-function controlled_markov_chain!(I, J, V, lin_ind, exo, endo, policy)
+function controlled_markov_chain!(I, J, V, lin_ind, endo, exo, policy)
   
   len_exo = length(exo)
   len_endo = length(endo)
@@ -92,9 +92,9 @@ end
 
 ## Stationary distribution
 
-function stationary_distribution(exo, endo, policy)
+function stationary_distribution(endo, exo, policy)
 
-  @unpack I, J, V, n = controlled_markov_chain(exo, endo, policy)
+  @unpack I, J, V, n = controlled_markov_chain(endo, exo, policy)
   
   transition = sparse(I, J, V, n, n)
 
