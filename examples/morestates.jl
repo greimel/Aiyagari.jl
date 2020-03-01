@@ -30,8 +30,8 @@ exo2 = ExogenousStateSpace([z_MC, x_MC])
 
 # Second, let's also add an additional endogenous state variable
 
-w_grid = LinRange(0.0, 3.0, 20)
-h_grid = LinRange(0.0, 1.0, 15)
+w_grid = LinRange(0.0, 1.0, 40)
+h_grid = LinRange(0.0, 2.6, 15)
 
 endo1 = EndogenousStateSpace((w=w_grid, ))
 endo2 = EndogenousStateSpace((w=w_grid, h=h_grid))
@@ -77,6 +77,11 @@ agg_state22 = HousingAS(r, p, endo2, exo2, param)
 #1.03 s (49 it)
 @time out22 = solve_bellman(endo2, exo2, agg_state22, param, Owner(Aiyagari.Unconditional(), Aiyagari.IsState()), rtol=√eps())
 #14.41 s (49 it)
+
+dist11 = stationary_distribution(endo1, exo1, out11.policies_full.w_next)
+dist21 = stationary_distribution(endo2, exo1, out21.policy)
+dist12 = stationary_distribution(endo1, exo2, out12.policies_full.w_next)
+dist22 = stationary_distribution(endo2, exo2, out22.policy)
 
 # Check if results are the same
 val11 = out11.val
@@ -141,6 +146,22 @@ display(plt21) #md
 display(plt22) #md
 #plot(plt11, plt12, plt21, plt22) #md
 
+@testset "stationary distribution with redundant states" begin #jl
+∑dist21 = dropdims(sum(reshape(dist21, (size(endo2)..., length(exo1))), dims=2), dims=2)
+@test maximum(abs, ∑dist21 .- dist11) < 2e-6 #jl
+
+∑dist12 = dropdims(sum(reshape(dist12, (length(endo1), size(exo2)...)), dims=3), dims=3)
+@test maximum(abs, ∑dist12 .- dist11) < 2e-6 #jl
+
+∑dist22 = dropdims(sum(reshape(dist22, (size(endo2)..., size(exo2)...)), dims=[2,4]), dims=(2,4))
+@test maximum(abs, ∑dist22 .- dist11) < 2e-6 #jl
+end #jl
+
+plot(w_grid, dist11, legend=false) #md
+plot!(w_grid, ∑dist21) #md
+plot!(w_grid, ∑dist12) #md
+plot!(w_grid, ∑dist22) #md
+#- #md
 
 # TODO: simple (linear or binary adjustment costs)
 # TODO: house quality shock 
