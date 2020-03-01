@@ -1,6 +1,6 @@
 # # Solving the Huggett model
 
-#jl using Test
+using Test #jl
 using Aiyagari
 using Optim, QuantEcon, Parameters
 
@@ -77,21 +77,22 @@ param = (β = 0.9, )
 @unpack val, policy, policies_full = solve_bellman(endo, exo, agg_state, param, Consumer(), rtol=√eps())
 # 22 ms 176 itr
 
-#jl using DelimitedFiles
-#writedlm("../matrices/huggett_value.txt", value) #src
-#jl value_test = readdlm(joinpath(PKG_HOME, "test/matrices", "huggett_value.txt"))
+using DelimitedFiles #jl
+using DelimitedFiles #src
+#writedlm(joinpath(PKG_HOME, "test/matrices", "huggett_value.txt"), val) #src
+value_test = readdlm(joinpath(PKG_HOME, "test/matrices", "huggett_value.txt")) #jl
 
-#jl @test all(val .≈ value_test)
+@test all(val .≈ value_test) #jl
 
 a_min, a_max = a_grid[[1;end]]
-#jl @test all(a_min .< policy .< a_max)
+@test all(a_min .< policy .< a_max) #jl
 
-#md using Plots 
-#md plot(a_grid, val) 
-#md #- 
-#md plot(a_grid, policies_full.a_next) 
-#md #- 
-#md plot(a_grid, policies_full.c) 
+using Plots #md
+plot(a_grid, val) #md
+#- #md
+plot(a_grid, policies_full.a_next) #md
+#- #md
+plot(a_grid, policies_full.c) #md
 
 #using BenchmarkTools
 
@@ -113,8 +114,8 @@ dist = stationary_distribution(z_MC, a_grid, policy)
 #926 μs
 
 #writedlm("test/matrices/huggett_dist.txt", dist) #src
-#jl dist_test = readdlm(joinpath(PKG_HOME, "test/matrices", "huggett_dist.txt"))
-#jl @test maximum(abs, dist .- dist_test) < 1e-14
+dist_test = readdlm(joinpath(PKG_HOME, "test/matrices", "huggett_dist.txt")) #jl
+@test maximum(abs, dist .- dist_test) < 1e-14 #jl
 
 # ## Looking at the equilibrium
 
@@ -127,7 +128,7 @@ function excess_demand(r)
   sum(dist .* policies_full.a_next)
 end
 
-#md r_vec = 0.07:0.005:0.11 
+r_vec = 0.07:0.005:0.11 #md
 
-#md plot(r_vec, excess_demand.(r_vec)) 
+plot(r_vec, excess_demand.(r_vec)) #md
 

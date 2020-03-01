@@ -1,9 +1,9 @@
 # # A model with homeowners and renters
 
-#jl using Test
+using Test #jl
 using Aiyagari
 using QuantEcon, Parameters
-#md using Plots
+using Plots #md
 
 PKG_HOME = joinpath(dirname(pathof(Aiyagari)), "..")
 
@@ -59,30 +59,30 @@ agg_state_own = HousingAS(r_own, p_own, w_grid_own, exo, param_own)
 
 dist = stationary_distribution(exo.mc, endo_own.grids.w, policies_full.w_next)
 
-#jl using DelimitedFiles
+using DelimitedFiles #jl
 
 # 
 
-#md plt_w = plot(w_grid_own, policies_full.w_next, title="wealth next period", xlab="wealth")
-#md plt_m_zoomed = plot(w_grid_own[1:15], policies_full.m[1:15,:], title="mortgage (zoomed)", xlab="wealth")
+plt_w = plot(w_grid_own, policies_full.w_next, title="wealth next period", xlab="wealth") #md
+plt_m_zoomed = plot(w_grid_own[1:15], policies_full.m[1:15,:], title="mortgage (zoomed)", xlab="wealth") #md
  
-#md plt_m = plot(w_grid_own, policies_full.m, title="mortgage", xlab="wealth")
+plt_m = plot(w_grid_own, policies_full.m, title="mortgage", xlab="wealth") #md
 
 
-#md plt_dist = plot(w_grid_own, dist, xlab="wealth", title="stationary distribution")
+plt_dist = plot(w_grid_own, dist, xlab="wealth", title="stationary distribution") #md
 
-#md plot(plt_w, plt_dist, plt_m, plt_m_zoomed, legend=false)
+plot(plt_w, plt_dist, plt_m, plt_m_zoomed, legend=false) #md
 
-#jl # using DelimitedFiles
-#jl # writedlm(joinpath(PKG_HOME, "test/matrices", "housing-simple-value.txt"), val) #src
-#jl # writedlm(joinpath(PKG_HOME, "test/matrices", "housing-simple-dist.txt"), dist) #src
+# using DelimitedFiles #jl
+#writedlm(joinpath(PKG_HOME, "test/matrices", "housing-simple-value.txt"), val) #src
+#writedlm(joinpath(PKG_HOME, "test/matrices", "housing-simple-dist.txt"), dist) #src
 
-#jl @testset "regression test housing-simple" begin
-#jl   value_test = readdlm(joinpath(PKG_HOME, "test/matrices", "housing-simple-value.txt"))
-#jl   dist_test = readdlm(joinpath(PKG_HOME, "test/matrices", "housing-simple-dist.txt"))
-#jl   @test all(val .== value_test)
-#jl   @test maximum(abs, dist .- dist_test) < 1e-12
-#jl end
+@testset "regression test housing-simple" begin #jl
+  value_test = readdlm(joinpath(PKG_HOME, "test/matrices", "housing-simple-value.txt")) #jl
+  dist_test = readdlm(joinpath(PKG_HOME, "test/matrices", "housing-simple-dist.txt")) #jl
+  @test all(val .== value_test) #jl
+  @test maximum(abs, dist .- dist_test) < 1e-12 #jl
+end #jl
 
 # ## Equilibrium
 
@@ -138,33 +138,32 @@ param = [param_both, param_both]
 
 @show r => a, p => h
  
-#md plt_own = plot(w_grid, owner, title="Who owns?")
+plt_own = plot(w_grid, owner, title="Who owns?") #md
 
 w_next_all = combined_policies(policies_full, owner, :w_next)
 h_all = combined_policies(policies_full, owner, :h)
 c_all = combined_policies(policies_full, owner, :c)
 a_all = combined_policies(policies_full, owner, :m, :w_next, f_own = x -> -x)
 
-#md plt_h = plot(w_grid, h_all, legend=:false, title="House size", markerstrokewidth=0, xlab="wealth")
+plt_h = plot(w_grid, h_all, legend=:false, title="House size", markerstrokewidth=0, xlab="wealth") #md
 
-#md plt_a = plot(w_grid, a_all, title = "asset/mortgage")
+plt_a = plot(w_grid, a_all, title = "asset/mortgage") #md
 
-#md plt_w = plot(w_grid, w_next_all, title = "wealth next period")
+plt_w = plot(w_grid, w_next_all, title = "wealth next period") #md
 
-#md plt_dist = plot(w_grid, dist, title = "stationary distribution")
+plt_dist = plot(w_grid, dist, title = "stationary distribution") #md
 
-#md plot(plt_h, plt_a, plt_w, plt_dist, legend=false)
-
-#
+plot(plt_h, plt_a, plt_w, plt_dist, legend=false) #md
+#- #md
 
 #writedlm(joinpath(PKG_HOME, "test/matrices", "own-rent-value.txt"), val) #src
 #writedlm(joinpath(PKG_HOME, "test/matrices", "own-rent-dist.txt"), dist) #src
 
-#jl @testset "own-rent" begin
-#jl   value_test = readdlm(joinpath(PKG_HOME, "test/matrices", "own-rent-value.txt"))
-#jl   dist_test = readdlm(joinpath(PKG_HOME, "test/matrices", "own-rent-dist.txt"))
-#jl   @test all(val .≈ value_test)
-#jl   @test maximum(abs, dist .- dist_test) < 1e-12
-#jl end
+@testset "own-rent" begin #jl
+  value_test = readdlm(joinpath(PKG_HOME, "test/matrices", "own-rent-value.txt")) #jl
+  dist_test = readdlm(joinpath(PKG_HOME, "test/matrices", "own-rent-dist.txt")) #jl
+  @test all(val .≈ value_test) #jl
+  @test maximum(abs, dist .- dist_test) < 1e-12 #jl
+end #jl
 
 
