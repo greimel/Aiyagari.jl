@@ -163,5 +163,28 @@ plot!(w_grid, ∑dist12) #md
 plot!(w_grid, ∑dist22) #md
 #- #md
 
+# # Adjustment costs for housing
+
+struct ProportionalAdjustmentCosts{T} <: AdjustmentCosts
+  κ::T
+end
+
+χ(h_prev, h, adj::ProportionalAdjustmentCosts) = adj.κ * h_prev * (h_prev != h)
+
+@time out21 = solve_bellman(endo2, exo1, agg_state21, param, Owner(adj = ProportionalAdjustmentCosts(0.2), state = IsState()), rtol=√eps())
+
+val_reshaped = reshape(out21.val, (size(endo2)..., length(exo1)))
+pol_reshaped = reshape(out21.policies_full, (size(endo2)..., length(exo1)))
+
+plot(w_grid, out11.val, color=:red, legend=false)
+
+plot!(endo2.grids.w, val_reshaped[:,1,:], color=:blue)
+
+plot(h_grid, pol_reshaped.h[5,:,:])
+
+out21.policy
+dist = stationary_distribution(exo.mc, w_grid, out21.policy)
+
+
 # TODO: simple (linear or binary adjustment costs)
 # TODO: house quality shock 
