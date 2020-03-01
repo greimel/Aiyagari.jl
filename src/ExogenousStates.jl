@@ -115,7 +115,7 @@ function product(mc_vec...)
 end
 
 
-export EndogenousStateSpace, ExogenousStateSpace, dimension
+export EndogenousStateSpace, ExogenousStateSpace, dimension, linear_indices
 
 end
 

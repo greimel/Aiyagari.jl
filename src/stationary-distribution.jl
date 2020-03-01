@@ -1,3 +1,18 @@
+
+module FindNeighbours
+
+abstract type PrevNext end
+struct Prev <: PrevNext end
+struct Next <: PrevNext end
+
+ind(x, ::Prev) = x.i_prev
+ind(x, ::Next) = x.i_next
+ind(x::AbstractVector, prevnext::Vector) = Tuple(ind.(x, prevnext))
+
+wgt(x, ::Prev) = x.λ
+wgt(x, ::Next) = 1 - x.λ
+wgt(x::AbstractVector, prevnext::Vector) = prod(wgt.(x, prevnext))
+
 # """
 #   Given a ordered vector [x_1 < x_2 < ... < x_N] and y ∈ [x_1, x_N] find i and λ such that y = λ x_i + (1-λ) x_{i+1}
 # """
@@ -20,60 +35,69 @@ function findneighbours_line(vector, point)
 end
 
 function findneighbours(grids, point)
-  if length(grids) == 1
-    
-    @unpack i_prev, i_next, λ = findneighbours_line(grids[1], point)
-    
-    return  [(i=i_prev, weight=λ),
-             (i=i_next, weight=1-λ)]
-  elseif length(grids) == 2
-    #ngb_1 = findneighbours_line(endo.grids[1], point[1])
-    #ngb_2 = findneighbours_line(endo.grids[2], point[2])
-    
-    ngb = [findneighbours_line(grids[i], point[i]) for i in 1:length(point)]
-    #neighbours = NamedTuple{keys(point)}(Tuple(neighbours_vec))
 
-    return [
-     (i=(ngb[1].i_prev, ngb[2].i_prev), weight=ngb[1].λ * ngb[2].λ), 
-     (i=(ngb[1].i_prev, ngb[2].i_next), weight=ngb[1].λ * (1-ngb[2].λ)),
-     (i=(ngb[1].i_next, ngb[2].i_prev), weight=(1-ngb[1].λ) * ngb[2].λ),
-     (i=(ngb[1].i_next, ngb[2].i_next), weight=(1-ngb[1].λ) * (1-ngb[2].λ))]
+  ngb_vec = [findneighbours_line(grids[i], point[i]) for i in 1:length(point)]
 
-  else
-    @error "not yet implemented for dim(endo) == $(length(grids))"
+  prev_next_combis = collect(Iterators.product(repeat([[Prev(), Next()]], length(grids))...))
+
+  ngb = map(prev_next_combis) do prev_next
+    (i=ind(ngb_vec, collect(prev_next)), weight=wgt(ngb_vec, collect(prev_next)))
   end
+  vec(ngb)
 end
 
-@testset "findneighbours" begin
-  grids = (a = LinRange(0.1,1,10), b=LinRange(1.1,2,10))
+export findneighbours
 
-  point = (a=0.15, b=1.15)
-  out = Aiyagari.findneighbours(grids, point)
+using Test, Parameters
 
-  a_check = sum(grids.a[out[i].i[1]] .* out[i].weight for i in 1:length(out))
-  b_check = sum(grids.b[out[i].i[2]] .* out[i].weight for i in 1:length(out)) 
-  @test a_check ≈ point.a
-  @test b_check ≈ point.b
-
-  point = (a=0.11111, b=1.56788)
-  out = Aiyagari.findneighbours(grids, point)
-
-  a_check = sum(grids.a[out[i].i[1]] .* out[i].weight for i in 1:length(out))
-  b_check = sum(grids.b[out[i].i[2]] .* out[i].weight for i in 1:length(out)) 
-  @test a_check ≈ point.a
-  @test b_check ≈ point.b
-end
-
-let a_grid = LinRange(1, 10, 100), p = 7.23456
+@testset "findneighbours_line" begin
+  a_grid = LinRange(1, 10, 100)
+  p = 7.23456
   @unpack i_prev, i_next, λ = findneighbours_line(a_grid, p)
 
   a_prev, a_next = a_grid[[i_prev; i_next]]
 
-  @testset "findneighbours" begin
-    @test λ * a_prev + (1-λ) * a_next ≈ p
-    @test a_prev < p < a_next
-  end
+  @test λ * a_prev + (1-λ) * a_next ≈ p
+  @test a_prev < p < a_next
 end
+
+@testset "findneighbours" begin
+  grids = (a = LinRange(0.1,1,10), b=LinRange(1.1,2,10))
+  point = (a=0.15, b=1.15)
+
+  ngb = findneighbours(grids, point)
+
+  a_check = sum(grids.a[ngb[i].i[1]] .* ngb[i].weight for i in 1:length(ngb))
+  b_check = sum(grids.b[ngb[i].i[2]] .* ngb[i].weight for i in 1:length(ngb)) 
+
+  @test a_check ≈ point.a
+  @test b_check ≈ point.b
+
+  point = (a=0.11111, b=1.56788)
+  ngb = findneighbours(grids, point)
+
+  a_check = sum(grids.a[ngb[i].i[1]] .* ngb[i].weight for i in 1:length(ngb))
+  b_check = sum(grids.b[ngb[i].i[2]] .* ngb[i].weight for i in 1:length(ngb)) 
+  @test a_check ≈ point.a
+  @test b_check ≈ point.b
+
+  grids = (a = LinRange(0.1,1,32), b=LinRange(1.1,2,71), c=LinRange(0,10,100))
+  point = (a=0.15, b=1.15, c=π)
+
+  ngb = findneighbours(grids, point)
+
+  a_check = sum(grids.a[ngb[i].i[1]] .* ngb[i].weight for i in 1:length(ngb))
+  b_check = sum(grids.b[ngb[i].i[2]] .* ngb[i].weight for i in 1:length(ngb)) 
+  c_check = sum(grids.c[ngb[i].i[3]] .* ngb[i].weight for i in 1:length(ngb)) 
+
+  @test a_check ≈ point.a
+  @test b_check ≈ point.b
+  @test c_check ≈ point.c
+end
+
+end # module
+
+using .FindNeighbours
 
 ## Build up transition matrix
 function controlled_markov_chain(endo, exo, policy)
@@ -111,7 +135,7 @@ function controlled_markov_chain!(I, J, V, lin_ind, endo, exo, policy)
       ijump_mass_vec = findneighbours(endo.grids, p)
       for ijump_mass in ijump_mass_vec
         @unpack i, weight = ijump_mass 
-        i_jump = linear_index(endo)[i...]
+        i_jump = linear_indices(endo)[i...]
         mass = weight 
         for i_exo_next in 1:len_exo
           j += 1
