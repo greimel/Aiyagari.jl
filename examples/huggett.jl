@@ -74,7 +74,7 @@ agg_state = HuggettAS(0.05, a_grid, z_MC)
 param = (β = 0.9, )
   
 #using BenchmarkTools
-@unpack val, policy, policies_full = solve_bellman(endo, exo, agg_state, param, Consumer(), tol=√eps())
+@unpack val, policy, policies_full = solve_bellman(endo, exo, agg_state, param, Consumer(), rtol=√eps())
 # 22 ms 176 itr
 
 #jl using DelimitedFiles
@@ -120,7 +120,7 @@ dist = stationary_distribution(z_MC, a_grid, policy)
 
 function excess_demand(r)
   agg_state = HuggettAS(r, a_grid, z_MC)
-  @unpack val, policy, policies_full = solve_bellman(endo, exo, agg_state, param, Consumer(), tol=√eps())
+  @unpack val, policy, policies_full = solve_bellman(endo, exo, agg_state, param, Consumer(), rtol=√eps())
 
   dist = stationary_distribution(z_MC, a_grid, policy)
 

@@ -55,7 +55,7 @@ p_own = 0.9
 param_own  = (β = 0.9, θ = 0.9, δ = 0.1, h_thres = eps())
 agg_state_own = HousingAS(r_own, p_own, w_grid_own, exo, param_own)
 
-@unpack policies_full, val = solve_bellman(endo_own, exo, agg_state_own, param_own, Owner(), tol=1e-7)
+@unpack policies_full, val = solve_bellman(endo_own, exo, agg_state_own, param_own, Owner(), rtol=√eps())
 
 dist = stationary_distribution(exo.mc, endo_own.grids.w, policies_full.w_next)
 
@@ -91,7 +91,7 @@ dist = stationary_distribution(exo.mc, endo_own.grids.w, policies_full.w_next)
 function excess_demand(r, p)
   agg_state_own = HousingAS(r, p, w_grid_own, exo, param_own)
 
-  @unpack policies_full, val = solve_bellman(endo_own, exo, agg_state_own, param_own, Owner(), tol=1e-6)
+  @unpack policies_full, val = solve_bellman(endo_own, exo, agg_state_own, param_own, Owner(), rtol=√eps())
 
   dist = stationary_distribution(z_MC, w_grid_own, policies_full.w_next)
 
@@ -113,7 +113,7 @@ end
 function excess_demand(r, p, endo, exo, param, hh; maxiter_bellman=200)
   agg_state = HousingAS(r, p, endo.grids.w, exo, param, ρ= p * (param[1].δ + r))
 
-  out = solve_bellman(endo, exo, agg_state, param, hh, maxiter=300, tol=1e-6)
+  out = solve_bellman(endo, exo, agg_state, param, hh, maxiter=300, rtol=√eps())
   
   @unpack val, policy, policies_full, owner = out
   

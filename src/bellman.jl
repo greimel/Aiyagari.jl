@@ -1,6 +1,6 @@
 function get_optimum end
 
-function solve_bellman(endo, exo, aggregate_state, params, hh::OwnOrRent; maxiter=200, tol=eps()^0.4)
+function solve_bellman(endo, exo, aggregate_state, params, hh::OwnOrRent; maxiter=200, rtol=eps()^0.4)
   value_old = zeros(length(endo), length(exo))
   value_new = zeros(size(value_old))
   owner = trues(size(value_old))
@@ -15,7 +15,7 @@ function solve_bellman(endo, exo, aggregate_state, params, hh::OwnOrRent; maxite
   policies_full = fill.(proto_pol_full, Ref(size(value_old)))
   converged = [trues(size(value_old)), trues(size(value_old))]
   
-  solve_bellman!(value_old, value_new, policy, policies_full, owner, endo, exo, converged, aggregate_state, params, hh::Household; maxiter=maxiter, tol=tol)
+  solve_bellman!(value_old, value_new, policy, policies_full, owner, endo, exo, converged, aggregate_state, params, hh::Household; maxiter=maxiter, rtol=rtol)
   
   # checks
   # at_max = mean(policy .≈ a_grid[end])
@@ -29,12 +29,12 @@ function solve_bellman(endo, exo, aggregate_state, params, hh::OwnOrRent; maxite
   (val = value_new, policy = policy, owner=owner, policies_full=StructArray.(policies_full), converged=converged)
 end
 
-function solve_bellman!(value_old, value_new, policy, policies_full, owner, endo, exo, converged, aggregate_state, params, hh::OwnOrRent; maxiter=100, tol = √eps())
+function solve_bellman!(value_old, value_new, policy, policies_full, owner, endo, exo, converged, aggregate_state, params, hh::OwnOrRent; maxiter=100, rtol = √eps())
   
   value_own = zeros(size(value_old))
   value_rent = zeros(size(value_old))
   
-  prog = ProgressThresh(tol, "Solving Bellman equation")
+  prog = ProgressThresh(rtol, "Solving Bellman equation")
   for i in 1:maxiter
     # own
     iterate_bellman!(value_own, value_old, policy[1], policies_full[1], endo, exo, converged[1], aggregate_state, params[1], hh.owner)
@@ -46,12 +46,16 @@ function solve_bellman!(value_old, value_new, policy, policies_full, owner, endo
     value_new .= max.(value_own, value_rent)
     
     diff = norm(value_old - value_new)
-    ProgressMeter.update!(prog, diff)
+    
+    adj_fact = max(norm(value_old), norm(value_new))
+     
+    ProgressMeter.update!(prog, diff / adj_fact)
     value_old .= value_new
     
-    if diff < tol
+    if diff < rtol * adj_fact
       break
     end
+
     if i == maxiter
       print("\n"^2)
       @warn "reached $maxiter, diff= $diff"
@@ -59,16 +63,19 @@ function solve_bellman!(value_old, value_new, policy, policies_full, owner, endo
   end
 end
 
-function solve_bellman!(value_old, value_new, policy, policies_full, endo, exo, converged, aggregate_state, params, hh::Household; maxiter=100, tol = √eps())
+function solve_bellman!(value_old, value_new, policy, policies_full, endo, exo, converged, aggregate_state, params, hh::Household; maxiter=100, rtol = √eps())
   
-  prog = ProgressThresh(tol, "Solving Bellman equation")
+  prog = ProgressThresh(rtol, "Solving Bellman equation")
   for i in 1:maxiter
     iterate_bellman!(value_new, value_old, policy, policies_full, endo, exo, converged, aggregate_state, params, hh::Household)
     diff = norm(value_old - value_new)
-    ProgressMeter.update!(prog, diff)
+    
+    adj_fact = max(norm(value_old), norm(value_new))
+     
+    ProgressMeter.update!(prog, diff / adj_fact)
     value_old .= value_new
     
-    if diff < tol
+    if diff < rtol * adj_fact
       break
     end
     if i == maxiter
@@ -78,7 +85,7 @@ function solve_bellman!(value_old, value_new, policy, policies_full, endo, exo, 
   end
 end
 
-function solve_bellman(endo, exo, aggregate_state, params, hh::Household; maxiter=200, tol=eps()^0.4)
+function solve_bellman(endo, exo, aggregate_state, params, hh::Household; maxiter=200, rtol=eps()^0.4)
   value_old = zeros(length(endo), length(exo))
   value_new = zeros(size(value_old))
   
@@ -88,7 +95,7 @@ function solve_bellman(endo, exo, aggregate_state, params, hh::Household; maxite
   policies_full = fill(proto_pol_full, size(value_old))
   converged = trues(size(value_old))
   
-  solve_bellman!(value_old, value_new, policy, policies_full, endo, exo, converged, aggregate_state, params, hh::Household; maxiter=maxiter, tol=tol)
+  solve_bellman!(value_old, value_new, policy, policies_full, endo, exo, converged, aggregate_state, params, hh::Household; maxiter=maxiter, rtol=rtol)
   
   # checks
   # at_max = mean(policy .≈ a_grid[end])
