@@ -56,6 +56,6 @@ export HouseState, IsState, NoState
 
 export MarkovChain
 
-examples = ["huggett", "housing"]
+examples = ["huggett", "housing", "morestates"]
 
 end # module
