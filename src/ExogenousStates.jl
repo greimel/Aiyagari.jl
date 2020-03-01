@@ -5,20 +5,22 @@ import QuantEcon: MarkovChain, stationary_distributions
 
 abstract type StateSpace end
 
-struct EndogenousStateSpace{T0,T1,T2,T3} <: StateSpace
+struct EndogenousStateSpace{T0,T1,T2,T3,T4} <: StateSpace
   grids::T0
   grid::T1 # grid
   indices::T2
-  size::T3
+  linear_indices::T3
+  size::T4
 end
 
-struct ExogenousStateSpace{T0,T1,T2,T3,T4,T5} <: StateSpace
+struct ExogenousStateSpace{T0,T1,T2,T3,T4,T5,T6} <: StateSpace
   grids::T0
   grid::T1 # grid
   indices::T2
-  size::T3
-  mc::T4
-  dist::T5 # stationary distribution
+  linear_indices::T3
+  size::T4
+  mc::T5
+  dist::T6 # stationary distribution
 end
 
 Base.size(ss::StateSpace) = ss.size
@@ -26,6 +28,7 @@ Base.length(ss::StateSpace) = prod(size(ss))
 Base.keys(ss::StateSpace) = keys(ss.grid[1])
 MarkovChain(exo::ExogenousStateSpace) = exo.mc
 dimension(ss::StateSpace) = length(size(ss))
+linear_indices(ss::StateSpace) = ss.linear_indices
 
 function EndogenousStateSpace(grids_nt::NamedTuple)
   keys_ = keys(grids_nt)
@@ -38,7 +41,7 @@ function EndogenousStateSpace(grids_nt::NamedTuple)
   indices0 = Iterators.product([1:n for n in size_]...)
   indicesNT = NamedTuple{keys_}.(indices0)
   
-  EndogenousStateSpace(grids_nt, gridNT, indicesNT, size_)
+  EndogenousStateSpace(grids_nt, gridNT, indicesNT, LinearIndices(size_), size_)
    
 end
 
@@ -74,7 +77,7 @@ function ExogenousStateSpace(vec_mc)
   indices0 = collect(Iterators.product([1:n for n in size]...))
   indicesNT = NamedTuple{keys(grid[1])}.(indices0)
   
-  ExogenousStateSpace(grids, grid, indicesNT, size, mc, stationary_distributions(mc)[1])
+  ExogenousStateSpace(grids, grid, indicesNT, LinearIndices(size), size, mc, stationary_distributions(mc)[1])
 end
 
 named_grid(grid, name) = NamedTuple{(name,)}.(Tuple.(Ref.(grid)))

@@ -19,14 +19,49 @@ function findneighbours_line(vector, point)
   (i_prev=i_prev, i_next=i_next, λ=λ)
 end
 
-function findneighbours(endo, point)
-  if dimension(endo) == 1
+function findneighbours(grids, point)
+  if length(grids) == 1
     
-    @unpack i_prev, i_next, λ = findneighbours_line(endo.grids[1], point)
+    @unpack i_prev, i_next, λ = findneighbours_line(grids[1], point)
     
     return  [(i=i_prev, weight=λ),
-   (i=i_next, weight=1-λ)]
+             (i=i_next, weight=1-λ)]
+  elseif length(grids) == 2
+    #ngb_1 = findneighbours_line(endo.grids[1], point[1])
+    #ngb_2 = findneighbours_line(endo.grids[2], point[2])
+    
+    ngb = [findneighbours_line(grids[i], point[i]) for i in 1:length(point)]
+    #neighbours = NamedTuple{keys(point)}(Tuple(neighbours_vec))
+
+    return [
+     (i=(ngb[1].i_prev, ngb[2].i_prev), weight=ngb[1].λ * ngb[2].λ), 
+     (i=(ngb[1].i_prev, ngb[2].i_next), weight=ngb[1].λ * (1-ngb[2].λ)),
+     (i=(ngb[1].i_next, ngb[2].i_prev), weight=(1-ngb[1].λ) * ngb[2].λ),
+     (i=(ngb[1].i_next, ngb[2].i_next), weight=(1-ngb[1].λ) * (1-ngb[2].λ))]
+
+  else
+    @error "not yet implemented for dim(endo) == $(length(grids))"
   end
+end
+
+@testset "findneighbours" begin
+  grids = (a = LinRange(0.1,1,10), b=LinRange(1.1,2,10))
+
+  point = (a=0.15, b=1.15)
+  out = Aiyagari.findneighbours(grids, point)
+
+  a_check = sum(grids.a[out[i].i[1]] .* out[i].weight for i in 1:length(out))
+  b_check = sum(grids.b[out[i].i[2]] .* out[i].weight for i in 1:length(out)) 
+  @test a_check ≈ point.a
+  @test b_check ≈ point.b
+
+  point = (a=0.11111, b=1.56788)
+  out = Aiyagari.findneighbours(grids, point)
+
+  a_check = sum(grids.a[out[i].i[1]] .* out[i].weight for i in 1:length(out))
+  b_check = sum(grids.b[out[i].i[2]] .* out[i].weight for i in 1:length(out)) 
+  @test a_check ≈ point.a
+  @test b_check ≈ point.b
 end
 
 let a_grid = LinRange(1, 10, 100), p = 7.23456
@@ -73,10 +108,10 @@ function controlled_markov_chain!(I, J, V, lin_ind, endo, exo, policy)
   
     for i_endo in 1:len_endo
       p = policy[i_endo, i_exo]
-      ijump_mass_vec = findneighbours(endo, p)
+      ijump_mass_vec = findneighbours(endo.grids, p)
       for ijump_mass in ijump_mass_vec
         @unpack i, weight = ijump_mass 
-        i_jump = i
+        i_jump = linear_index(endo)[i...]
         mass = weight 
         for i_exo_next in 1:len_exo
           j += 1
