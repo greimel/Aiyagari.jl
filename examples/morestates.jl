@@ -171,20 +171,35 @@ end
 
 χ(h_prev, h, adj::ProportionalAdjustmentCosts) = adj.κ * h_prev * (h_prev != h)
 
-@time out21 = solve_bellman(endo2, exo1, agg_state21, param, Owner(adj = ProportionalAdjustmentCosts(0.2), state = IsState()), rtol=√eps())
+w_grid = LinRange(0.0, 1.0, 30)
+h_grid = LinRange(0.0, 1.9, 20)
+
+endo2 = EndogenousStateSpace((w=w_grid, h=h_grid))
+
+@time out21 = solve_bellman(endo2, exo1, agg_state21, param, Owner(adj = ProportionalAdjustmentCosts(0.1), state = IsState()), rtol=eps()^(1/3))
 
 val_reshaped = reshape(out21.val, (size(endo2)..., length(exo1)))
 pol_reshaped = reshape(out21.policies_full, (size(endo2)..., length(exo1)))
 
-plot(w_grid, out11.val, color=:red, legend=false)
 
-plot!(endo2.grids.w, val_reshaped[:,1,:], color=:blue)
+plot(endo2.grids.w, val_reshaped[:,1,:], color=:blue, title="Initial h matters")
+ plot!(endo2.grids.w, val_reshaped[:,15,:], color=:green)
 
-plot(h_grid, pol_reshaped.h[5,:,:])
+
+map(1:3) do i_z
+  plt = plot(legend=false)
+  for i in 1:length(w_grid) 
+    plot!(plt, h_grid, pol_reshaped.h[i,:,i_z], xlab="h")
+  end
+  plt
+end |> vec -> plot(vec...)
 
 out21.policy
-dist = stationary_distribution(exo.mc, w_grid, out21.policy)
+dist = stationary_distribution(endo2, exo1, out21.policy)
+r_dist = reshape(dist, (size(endo2)...,length(exo1)))
 
+plot(w_grid, dropdims(sum(r_dist, dims=2), dims=2))
+plot(h_grid, dropdims(sum(r_dist, dims=1), dims=1))
 
-# TODO: simple (linear or binary adjustment costs)
+surface(w_grid, h_grid, r_dist[:,:,1])
 # TODO: house quality shock 
