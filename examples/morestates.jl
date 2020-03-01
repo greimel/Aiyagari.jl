@@ -95,7 +95,7 @@ plt21 = plot!(plt11, legend=false, title="redundant endogenous state") #md
     for i_h in 1:length(h_grid)
       val_i = val21[:,i_h,:]
       plot!(plt21, w_grid, val_i, alpha = 0.35 / length(h_grid)) #md
-      @test all(val11 .≈ val_i) #jl
+      @test val11 ≈ val_i #jl
       max_i = maximum(abs, val11 .- val_i) #jl
       max_diff = max_diff < max_i ? max_diff : max_i  #jl
      end
@@ -110,7 +110,7 @@ end #jl
     max_diff = Inf #jl
     for i_x in 1:length(x_grid) #jl
       val_i = val12[:,:,i_x] #jl
-      @test all(val11 .≈ val_i) #jl
+      @test val11 ≈ val_i #jl
       max_i = maximum(abs, val11 .- val_i) #jl
       max_diff = max_diff < max_i ? max_diff : max_i  #jl
     end #jl
@@ -128,7 +128,7 @@ plt22 = plot!(plt11, legend=false, title="redundant endo + exo state")  #md
        for i_h in 1:length(h_grid)
         val_i = val22[:,i_h,:,i_x]
         plot!(plt22, w_grid, val_i, alpha = 0.35 / length(x_grid) / length(h_grid)) #md
-        @test all(val11 .≈ val_i) #jl
+        @test val11 ≈ val_i #jl
         max_i = maximum(abs, val11 .- val_i) #jl
         max_diff = max_diff < max_i ? max_diff : max_i  #jl
       end
