@@ -25,6 +25,7 @@ Base.size(ss::StateSpace) = ss.size
 Base.length(ss::StateSpace) = prod(size(ss))
 Base.keys(ss::StateSpace) = keys(ss.grid[1])
 MarkovChain(exo::ExogenousStateSpace) = exo.mc
+dimension(ss::StateSpace) = length(size(ss))
 
 function EndogenousStateSpace(grids_nt::NamedTuple)
   keys_ = keys(grids_nt)
@@ -111,7 +112,7 @@ function product(mc_vec...)
 end
 
 
-export EndogenousStateSpace, ExogenousStateSpace
+export EndogenousStateSpace, ExogenousStateSpace, dimension
 
-end  
+end
 
