@@ -55,7 +55,7 @@ p_own = 0.9
 param_own  = (β = 0.9, θ = 0.9, δ = 0.1, h_thres = eps())
 agg_state_own = HousingAS(r_own, p_own, w_grid_own, exo, param_own)
 
-@unpack policies_full, val = solve_bellman(endo_own, exo, agg_state_own, param_own, Owner(Aiyagari.Unconditional()), tol=1e-7)
+@unpack policies_full, val = solve_bellman(endo_own, exo, agg_state_own, param_own, Owner(), tol=1e-7)
 
 dist = stationary_distribution(exo.mc, endo_own.grids.w, policies_full.w_next)
 
@@ -91,7 +91,7 @@ dist = stationary_distribution(exo.mc, endo_own.grids.w, policies_full.w_next)
 function excess_demand(r, p)
   agg_state_own = HousingAS(r, p, w_grid_own, exo, param_own)
 
-  @unpack policies_full, val = solve_bellman(endo_own, exo, agg_state_own, param_own, Owner(Aiyagari.Unconditional()), tol=1e-6)
+  @unpack policies_full, val = solve_bellman(endo_own, exo, agg_state_own, param_own, Owner(), tol=1e-6)
 
   dist = stationary_distribution(z_MC, w_grid_own, policies_full.w_next)
 
@@ -134,7 +134,7 @@ endo = EndogenousStateSpace((w=w_grid,))
 param_both = (β = 0.93, θ = 0.9, δ = 0.1, h_thres = 1.2)
 param = [param_both, param_both]
 
-@unpack val, policy, policies_full, owner, a, h, dist = excess_demand(r, p, endo, exo, param, OwnOrRent(Owner(Aiyagari.Unconditional()), Renter()))
+@unpack val, policy, policies_full, owner, a, h, dist = excess_demand(r, p, endo, exo, param, OwnOrRent())
 
 @show r => a, p => h
  

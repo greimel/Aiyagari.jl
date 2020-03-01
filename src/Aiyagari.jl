@@ -23,15 +23,17 @@ abstract type Household end
 @with_kw struct Consumer{T} <: Household
   𝔼::T = Unconditional()
 end
-struct Owner{T} <: Household
-  𝔼::T
+
+@with_kw struct Owner{T} <: Household
+  𝔼::T = Unconditional()
 end
+
 @with_kw struct Renter{T} <: Household
   𝔼::T = Unconditional()
 end
-struct OwnOrRent{O<:Owner,R<:Renter} <: Household
-  owner::O
-  renter::R
+@with_kw struct OwnOrRent{O<:Owner,R<:Renter} <: Household
+  owner::O = Owner()
+  renter::R = Renter()
 end
 
 𝔼(hh::Household) = hh.𝔼
