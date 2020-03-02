@@ -165,7 +165,8 @@ function solve_bellman(endo, exo, aggregate_state, params, hh::OwnOrRent; maxite
   W_old     = [zeros(container_size) for i in 1:n]
   W_new     = [zeros(container_size) for i in 1:n]
   converged = [trues(container_size) for i in 1:n]
-  owner = zeros(Int, container_size)
+  #owner = zeros(Int, container_size)
+  owner = trues(container_size)
     
   # @unpack proto_pol, proto_pol_full
   proto = map(1:n) do i
