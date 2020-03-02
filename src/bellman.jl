@@ -178,30 +178,42 @@ function solve_bellman(endo, exo, aggregate_state, params, hh::OwnOrRent; maxite
   (val = value_new, policy = policy, owner=owner, policies_full=StructArray.(policies_full), converged=converged)
 end
 
-function solve_bellman!(value_old, value_new, policy, policies_full, owner, endo, exo, converged, aggregate_state, params, hh::OwnOrRent; maxiter=100, rtol = √eps())
+function solve_bellman!(value_old, value_new_own, policy, policies_full, owner, endo, exo, converged, aggregate_state, params, hh::OwnOrRent; maxiter=100, rtol = √eps())
   
   value_own = zeros(size(value_old))
   value_rent = zeros(size(value_old))
   
+  #value_new_own = zeros(size(value_old))
+  value_new_rent = zeros(size(value_old))
+  
+  value_old_own = zeros(size(value_old))
+  value_old_rent = zeros(size(value_old))
+  
   prog = ProgressThresh(rtol, "Solving Bellman equation")
   for i in 1:maxiter
     # own
-    iterate_bellman!(value_own, value_old, policy[1], policies_full[1], endo, exo, converged[1], aggregate_state, params[1], hh.owner)
+    iterate_bellman!(value_own, value_old_own, policy[1], policies_full[1], endo, exo, converged[1], aggregate_state, params[1], hh.owner)
 
     # rent
-    iterate_bellman!(value_rent, value_old, policy[2], policies_full[2], endo, exo, converged[2], aggregate_state, params[2], hh.renter)
+    iterate_bellman!(value_rent, value_old_rent, policy[2], policies_full[2], endo, exo, converged[2], aggregate_state, params[2], hh.renter)
     
     owner .= value_own .> value_rent
-    value_new .= max.(value_own, value_rent)
+    value_new_own .= max.(value_own, value_rent)
+    value_new_rent .= max.(value_own, value_rent)
     
-    diff = norm(value_old - value_new)
+    diff_own = norm(value_old_own - value_new_own)
+    diff_rent = norm(value_old_rent - value_new_rent)
+    diff = min(diff_own, diff_rent)
     
-    adj_fact = max(norm(value_old), norm(value_new))
-     
-    ProgressMeter.update!(prog, diff / adj_fact)
-    value_old .= value_new
+    adj_fact_own  = max(norm(value_old_own ), norm(value_new_own ))
+    adj_fact_rent = max(norm(value_old_rent), norm(value_new_rent))
     
-    if diff < rtol * adj_fact
+    relative_error = max(diff_own / adj_fact_own, diff_rent / adj_fact_rent)
+    ProgressMeter.update!(prog, relative_error)
+    value_old_own .= value_new_own
+    value_old_rent .= value_new_rent
+    
+    if relative_error < rtol
       break
     end
 
@@ -211,3 +223,4 @@ function solve_bellman!(value_old, value_new, policy, policies_full, owner, endo
     end
   end
 end
+
