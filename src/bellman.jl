@@ -18,12 +18,6 @@ function solve_bellman(endo, exo, aggregate_state, params, hh::OwnOrRent; maxite
   
   solve_bellman!(value_old, value_new, policy, policies_full, owner, endo, exo, converged, aggregate_state, params, hh::Household; maxiter=maxiter, rtol=rtol)
   
-  # checks
-  # at_max = mean(policy .≈ a_grid[end])
-  # at_min = mean(policy .≈ a_grid[1])
-  # at_max > 0 && @warn "optimal policy is at upper bound $(100 * at_max) % of the time"
-  # at_min > 0 && @warn "optimal policy is at lower bound $(100 * at_min) % of the time"
-
   all(all.(converged)) || @warn "optimization didn't converge at $(mean.(converged) * 100)%"
 
   
@@ -135,9 +129,9 @@ end
 
 function solve_bellman!(value_old, value_new, policy, policies_full, endo, exo, converged, aggregate_state, params, hh::Household; maxiter=100, rtol = √eps())
   
-  prog = ProgressThresh(rtol, "Solving Bellman equation")
+  prog = ProgressThresh(rtol, "Bellman: VFI")
   for i in 1:maxiter
-    iterate_bellman!(value_new, value_old, policy, policies_full, endo, exo, converged, aggregate_state, params, hh::Household)
+    iterate_bellman!(value_new, value_old, policy, policies_full, endo, exo, converged, aggregate_state, params, hh)
     diff = norm(value_old - value_new)
     
     adj_fact = max(norm(value_old), norm(value_new))
@@ -166,18 +160,11 @@ function solve_bellman(endo, exo, aggregate_state, params, hh::Household; maxite
   converged = trues(size(value_old))
   
   solve_bellman!(value_old, value_new, policy, policies_full, endo, exo, converged, aggregate_state, params, hh::Household; maxiter=maxiter, rtol=rtol)
-  
-  # checks
-  # at_max = mean(policy .≈ a_grid[end])
-  # at_min = mean(policy .≈ a_grid[1])
-  # at_max > 0 && @warn "optimal policy is at upper bound $(100 * at_max) % of the time"
-  # at_min > 0 && @warn "optimal policy is at lower bound $(100 * at_min) % of the time"
-  
+    
   number_conv = sum(converged)
   
   length(converged) == number_conv || @warn "Bellman didn't converge at $(round((1-number_conv / length(converged)) * 100, digits=4))% ($(length(converged) - number_conv) states)"
 
-  
   (val = value_new, policy = policy, policies_full=StructArray(policies_full), converged=converged)
 end
 
@@ -203,7 +190,7 @@ function iterate_bellman!(value_new, value_old, policy, policies_full, endo, exo
     for (i_endo, endo_state) in enumerate(endo.grid) 
       states = merge(endo_state, exo_state)
       ProgressMeter.next!(prog)
-      @unpack pol, pol_full, val, conv = get_optimum(states, agg_state, 𝔼V, params, endo, hh::Household)
+      @unpack pol, pol_full, val, conv = get_optimum(states, agg_state, 𝔼V, params, endo, hh)
 
       policy[i_endo, i_exo]    = pol 
       policies_full[i_endo, i_exo] = pol_full
