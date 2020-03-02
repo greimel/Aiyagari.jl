@@ -156,29 +156,37 @@ end
 ############################################################
 
 function solve_bellman(endo, exo, aggregate_state, params, hh::OwnOrRent; maxiter=200, rtol=eps()^0.4)
-  value_old = zeros(length(endo), length(exo))
-  value_new = zeros(size(value_old))
-  owner = trues(size(value_old))
+  container_size = (length(endo), length(exo))
+  @info "here"
+  hh_vec= [hh.owner, hh.renter]
+  n = length(hh_vec)
+  
+  V         = [zeros(container_size) for i in 1:n]
+  W_old     = [zeros(container_size) for i in 1:n]
+  W_new     = [zeros(container_size) for i in 1:n]
+  converged = [trues(container_size) for i in 1:n]
+  owner = zeros(Int, container_size)
     
-  proto_own  = proto_policy(endo, exo, value_new, aggregate_state, params[1], hh.owner)
-  proto_rent = proto_policy(endo, exo, value_new, aggregate_state, params[2], hh.renter)
+  # @unpack proto_pol, proto_pol_full
+  proto = map(1:n) do i
+    proto_policy(endo, exo, V[1], aggregate_state, params[i], hh_vec[i])
+  end
+    
+  proto_pol = [p.proto_pol for p in proto]
+  proto_pol_full = [p.proto_pol_full for p in proto]
   
-  proto_pol = [proto_own.proto_pol, proto_rent.proto_pol]
-  proto_pol_full = [proto_own.proto_pol_full, proto_rent.proto_pol_full]
+  policy = fill.(proto_pol, Ref(container_size))
+  policies_full = fill.(proto_pol_full, Ref(container_size))
   
-  policy = fill.(proto_pol, Ref(size(value_old)))
-  policies_full = fill.(proto_pol_full, Ref(size(value_old)))
-  converged = [trues(size(value_old)), trues(size(value_old))]
-  
-  solve_bellman!(value_old, value_new, policy, policies_full, owner, endo, exo, converged, aggregate_state, params, hh; maxiter=maxiter, rtol=rtol)
+  solve_bellman!(W_old, W_new, V, policy, policies_full, owner, endo, exo, converged, aggregate_state, params, hh_vec; maxiter=maxiter, rtol=rtol)
   
   all(all.(converged)) || @warn "optimization didn't converge at $(mean.(converged) * 100)%"
 
   
-  (val = value_new, policy = policy, owner=owner, policies_full=StructArray.(policies_full), converged=converged)
+  (val = W_new[1], policy = policy, owner=owner, policies_full=StructArray.(policies_full), converged=converged)
 end
 
-function solve_bellman!(W_old_own, W_new_own, policy, policies_full, owner, endo, exo, converged, aggregate_state, params, hh::OwnOrRent; maxiter=100, rtol = √eps())
+function solve_bellman!(W_old::Vector, W_new::Vector, V::Vector, policy::Vector, policies_full::Vector, owner, endo, exo, converged::Vector, aggregate_state, params::Vector, hh_vec::Vector; maxiter=100, rtol = √eps())
   
   V_own = zeros(size(W_old_own))
   V_rent = zeros(size(W_old_own))
