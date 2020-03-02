@@ -187,33 +187,24 @@ function solve_bellman(endo, exo, aggregate_state, params, hh::OwnOrRent; maxite
 end
 
 function solve_bellman!(W_old::Vector, W_new::Vector, V::Vector, policy::Vector, policies_full::Vector, owner, endo, exo, converged::Vector, aggregate_state, params::Vector, hh_vec::Vector; maxiter=100, rtol = √eps())
-  
-  V_own, V_rent = V
-  
-  W_new_own, W_new_rent = W_new
-  W_old_own, W_old_rent = W_old
     
   prog = ProgressThresh(rtol, "Solving Bellman equation")
   for i in 1:maxiter
-    # own
-    iterate_bellman!(V_own, W_old_own, policy[1], policies_full[1], endo, exo, converged[1], aggregate_state, params[1], hh_vec[1])
-
-    # rent
-    iterate_bellman!(V_rent, W_old_rent, policy[2], policies_full[2], endo, exo, converged[2], aggregate_state, params[2], hh_vec[2])
+    iterate_bellman!.(V, W_old, policy, policies_full, Ref(endo), Ref(exo), converged, Ref(aggregate_state), params, hh_vec)
     
-    update_coupled_values!(W_new_own, W_new_rent, V_own, V_rent, owner)
+    update_coupled_values!(W_new, V, owner)
     
-    diff_own  = norm(W_old_own  - W_new_own)
-    diff_rent = norm(W_old_rent - W_new_rent)
-    diff = min(diff_own, diff_rent)
+    diff = norm.(W_old .- W_new)
     
-    adj_fact_own  = max(norm(W_old_own ), norm(W_new_own ))
-    adj_fact_rent = max(norm(W_old_rent), norm(W_new_rent))
+    adj_fact = max.(norm.(W_old), norm.(W_new))
     
-    relative_error = max(diff_own / adj_fact_own, diff_rent / adj_fact_rent)
+    relative_error = maximum(diff ./ adj_fact)
+    
     ProgressMeter.update!(prog, relative_error)
-    W_old_own .= W_new_own
-    W_old_rent .= W_new_rent
+    
+    for i in 1:length(W_old)
+      W_old[i] .= W_new[i]
+    end
     
     if relative_error < rtol
       break
@@ -221,12 +212,14 @@ function solve_bellman!(W_old::Vector, W_new::Vector, V::Vector, policy::Vector,
 
     if i == maxiter
       print("\n"^2)
-      @warn "reached $maxiter, diff= $diff"
+      @warn "reached $maxiter, diff= $relative_error"
     end
   end
 end
 
-function update_coupled_values!(W_own, W_rent, V_own, V_rent, owner)
+function update_coupled_values!(W, V, owner)
+  W_own, W_rent = W
+  V_own, V_rent = V
   W_own  .= max.(V_own, V_rent)
   W_rent .= max.(V_own, V_rent)
   
