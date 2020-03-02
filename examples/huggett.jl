@@ -18,7 +18,7 @@ z_prob = [0.7 0.15 0.15;
           0.15 0.15 0.7]
 z_MC = MarkovChain(z_prob, z_grid, :z)
 
-exo = ExogenousStateSpace([z_MC])
+exo = ExogenousStateSpace([z_MC]);
 
 # ## Define the household's problem in the Huggett model
 
@@ -66,7 +66,7 @@ end
 function HuggettAS(r, a_grid, z_MC)
   dist_proto = zeros((length(a_grid), length(z_MC.state_values)))
   HuggettAS(r, dist_proto)
-end
+end;
 
 # ## Initialize the aggregate state and solve the model
 
@@ -75,7 +75,7 @@ param = (β = 0.9, )
   
 #using BenchmarkTools
 @unpack val, policy, policies_full = solve_bellman(endo, exo, agg_state, param, Consumer(), rtol=√eps())
-# 22 ms 176 itr
+#22 ms 176 itr
 
 using DelimitedFiles #jl
 using DelimitedFiles #src
@@ -94,21 +94,21 @@ plot(a_grid, policies_full.a_next) #md
 #- #md
 plot(a_grid, policies_full.c) #md
 
-#using BenchmarkTools
+#using BenchmarkTools #src
 
-# let value = value, policy=policy, z_mc = z_MC
-#   lin_ind = LinearIndices(size(value))
-# 
-#   ngp_exo = length(z_mc.state_values)
-#   n = length(policy)
-#   len = n * ngp_exo * 2
-# 
-#   I = zeros(Int, len)
-#   J = zeros(Int, len)
-#   V = zeros(len)
-# 
-#   @btime Aiyagari.controlled_markov_chain!($I, $J, $V, $lin_ind, $z_mc, $a_grid, $policy)
-# end
+# let value = value, policy=policy, z_mc = z_MC #src
+#   lin_ind = LinearIndices(size(value)) #src
+#  #src
+#   ngp_exo = length(z_mc.state_values) #src
+#   n = length(policy) #src
+#   len = n * ngp_exo * 2 #src
+#  #src
+#   I = zeros(Int, len) #src
+#   J = zeros(Int, len) #src
+#   V = zeros(len) #src
+#  #src
+#   @btime Aiyagari.controlled_markov_chain!($I, $J, $V, $lin_ind, $z_mc, #src $a_grid, $policy)
+# end #src
 
 dist = stationary_distribution(endo, exo, policy)
 #926 μs
@@ -131,4 +131,33 @@ end
 r_vec = 0.07:0.005:0.11 #md
 
 plot(r_vec, excess_demand.(r_vec)) #md
+
+# ## Finite Horizon: Solving the OLG version of the model
+
+function Aiyagari.get_optimum_last(states, agg_state, params, endo, hh::Consumer)
+  a_grid = endo.grids.a
+  
+  a_next = 0.0
+  val    = objective((a_next=a_next,), states, agg_state, x -> 0, params)
+  conv   = true
+  
+  pol = a_next
+  pol_full = (a_next=a_next, c=get_c((a_next=a_next, ), states, agg_state))
+  
+  (pol=pol, pol_full=pol_full, val=val, conv=conv)
+end
+
+age_grid = 25:65
+
+@unpack val, policy, policies_full = solve_bellman(endo, exo, agg_state, param, Consumer(), age_grid)
+
+using Plots, Colors #md
+#md
+plt = plot(legend=false) #md
+ ran = 1:length(age_grid)- 9 #md
+ col = range(colorant"deepskyblue", stop=colorant"navyblue", length=length(ran)) #md
+ map(ran) do i #md
+   plot!(plt, a_grid, value[:,:,i], color=col[i]) #md
+ end #md
+ plt #md
 
