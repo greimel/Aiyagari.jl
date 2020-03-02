@@ -188,22 +188,18 @@ end
 
 function solve_bellman!(W_old::Vector, W_new::Vector, V::Vector, policy::Vector, policies_full::Vector, owner, endo, exo, converged::Vector, aggregate_state, params::Vector, hh_vec::Vector; maxiter=100, rtol = √eps())
   
-  V_own = zeros(size(W_old_own))
-  V_rent = zeros(size(W_old_own))
+  V_own, V_rent = V
   
-  #W_new_own = zeros(size(W_old_own))
-  W_new_rent = zeros(size(W_old_own))
-  
-  W_old_own = zeros(size(W_old_own))
-  W_old_rent = zeros(size(W_old_own))
-  
+  W_new_own, W_new_rent = W_new
+  W_old_own, W_old_rent = W_old
+    
   prog = ProgressThresh(rtol, "Solving Bellman equation")
   for i in 1:maxiter
     # own
-    iterate_bellman!(V_own, W_old_own, policy[1], policies_full[1], endo, exo, converged[1], aggregate_state, params[1], hh.owner)
+    iterate_bellman!(V_own, W_old_own, policy[1], policies_full[1], endo, exo, converged[1], aggregate_state, params[1], hh_vec[1])
 
     # rent
-    iterate_bellman!(V_rent, W_old_rent, policy[2], policies_full[2], endo, exo, converged[2], aggregate_state, params[2], hh.renter)
+    iterate_bellman!(V_rent, W_old_rent, policy[2], policies_full[2], endo, exo, converged[2], aggregate_state, params[2], hh_vec[2])
     
     update_coupled_values!(W_new_own, W_new_rent, V_own, V_rent, owner)
     
