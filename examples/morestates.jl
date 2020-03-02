@@ -182,24 +182,24 @@ val_reshaped = reshape(out21.val, (size(endo2)..., length(exo1)))
 pol_reshaped = reshape(out21.policies_full, (size(endo2)..., length(exo1)))
 
 
-plot(endo2.grids.w, val_reshaped[:,1,:], color=:blue, title="Initial h matters")
- plot!(endo2.grids.w, val_reshaped[:,15,:], color=:green)
+plot(endo2.grids.w, val_reshaped[:,1,:], color=:blue, title="Initial h matters") #md
+ plot!(endo2.grids.w, val_reshaped[:,15,:], color=:green) #md
 
 
-map(1:3) do i_z
-  plt = plot(legend=false)
-  for i in 1:length(w_grid) 
-    plot!(plt, h_grid, pol_reshaped.h[i,:,i_z], xlab="h")
-  end
-  plt
-end |> vec -> plot(vec...)
+map(1:3) do i_z #md
+  plt = plot(legend=false) #md
+  for i in 1:length(w_grid)  #md
+    plot!(plt, h_grid, pol_reshaped.h[i,:,i_z], xlab="h") #md
+  end #md
+  plt #md
+end |> vec -> plot(vec...) #md
 
-out21.policy
-dist = stationary_distribution(endo2, exo1, out21.policy)
-r_dist = reshape(dist, (size(endo2)...,length(exo1)))
-
-plot(w_grid, dropdims(sum(r_dist, dims=2), dims=2))
-plot(h_grid, dropdims(sum(r_dist, dims=1), dims=1))
-
-surface(w_grid, h_grid, r_dist[:,:,1])
+out21.policy# md
+dist = stationary_distribution(endo2, exo1, out21.policy)# md
+r_dist = reshape(dist, (size(endo2)...,length(exo1)))# md
+# md
+plot(w_grid, dropdims(sum(r_dist, dims=2), dims=2))# md
+plot(h_grid, dropdims(sum(r_dist, dims=1), dims=1))# md
+# md
+surface(w_grid, h_grid, r_dist[:,:,1])# md
 # TODO: house quality shock 
