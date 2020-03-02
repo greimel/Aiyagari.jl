@@ -157,7 +157,7 @@ plt = plot(legend=false) #md
  ran = 1:length(age_grid)- 9 #md
  col = range(colorant"deepskyblue", stop=colorant"navyblue", length=length(ran)) #md
  map(ran) do i #md
-   plot!(plt, a_grid, value[:,:,i], color=col[i]) #md
+   plot!(plt, a_grid, val[:,:,i], color=col[i]) #md
  end #md
  plt #md
 
