@@ -1,4 +1,5 @@
 function get_optimum end
+function get_optimum_last end
 
 function solve_bellman(endo, exo, aggregate_state, params, hh::OwnOrRent; maxiter=200, rtol=eps()^0.4)
   value_old = zeros(length(endo), length(exo))
@@ -62,6 +63,75 @@ function solve_bellman!(value_old, value_new, policy, policies_full, owner, endo
     end
   end
 end
+
+############################################################
+## Finite Horizon (OLG)
+############################################################
+
+function solve_bellman_T!(value, policy, policies_full, endo, exo, converged, aggregate_state, params, hh::Household, t_grid)
+  
+  # Solving the last period (special-cased for bequests, etc)
+  iterate_bellman_last!(@view(value[:,:,end]),
+                   @view(policy[:,:,end]),
+                   @view(policies_full[:,:,end]),
+                   endo, exo,
+                   @view(converged[:,:,end]), aggregate_state, params, hh)
+  
+  # Solving all other periods
+  @showprogress "Bellman(T): VFI" for i_t in reverse(1:length(t_grid)-1)
+    iterate_bellman!(@view(value[:,:,i_t]),
+                     @view(value[:,:,i_t+1]),
+                     @view(policy[:,:,i_t]),
+                     @view(policies_full[:,:,i_t]),
+                     endo, exo,
+                     @view(converged[:,:,i_t]), aggregate_state, params, hh)
+  end
+end
+
+function solve_bellman(endo, exo, aggregate_state, params, hh::Household, t_grid)
+  container_size = (length(endo), length(exo), length(t_grid))
+
+  value = zeros(container_size)
+  
+  @unpack proto_pol, proto_pol_full = proto_policy(endo, exo, value[:,:,1], aggregate_state, params, hh)
+  
+  policy = fill(proto_pol, container_size)
+  policies_full = fill(proto_pol_full, container_size)
+  converged = trues(container_size)
+  
+  solve_bellman_T!(value, policy, policies_full, endo, exo, converged, aggregate_state, params, hh, t_grid)
+    
+  number_conv = sum(converged)
+  
+  length(converged) == number_conv || @warn "Bellman didn't converge at $(round((1-number_conv / length(converged)) * 100, digits=4))% ($(length(converged) - number_conv) states)"
+  
+  (val = value, policy = policy, policies_full=StructArray(policies_full), converged=converged)
+end
+
+# For OLG: solve last period
+function iterate_bellman_last!(value, policy, policies_full, endo, exo, converged, agg_state, params, hh::Household)
+  mc = MarkovChain(exo)
+  n = length(value)
+  prog = Progress(n, desc="Iterating", offset=1, dt=1)
+  for (i_exo, exo_state) in enumerate(mc.state_values)
+    # Create interpolated expected value function
+  
+    for (i_endo, endo_state) in enumerate(endo.grid) 
+      states = merge(endo_state, exo_state)
+      ProgressMeter.next!(prog)
+      @unpack pol, pol_full, val, conv = get_optimum_last(states, agg_state, params, endo, hh)
+
+      policy[i_endo, i_exo]    = pol 
+      policies_full[i_endo, i_exo] = pol_full
+      value[i_endo, i_exo] = val 
+      converged[i_endo, i_exo] = conv 
+    end
+  end
+end
+
+############################################################
+## Infinite horizon
+############################################################
 
 function solve_bellman!(value_old, value_new, policy, policies_full, endo, exo, converged, aggregate_state, params, hh::Household; maxiter=100, rtol = √eps())
   
