@@ -180,7 +180,7 @@ function solve_bellman(endo, exo, aggregate_state, params, hh::OwnOrRent; maxite
   
   solve_bellman!(W_old, W_new, V, policy, policies_full, owner, endo, exo, converged, aggregate_state, params, hh_vec; maxiter=maxiter, rtol=rtol)
   
-  all(all.(converged)) || @warn "optimization didn't converge at $(mean.(converged) * 100)%"
+  all(all.(converged)) || @warn "optimization didn't converge at $((1 .- mean.(converged)) .* 100)%"
 
   
   (val = W_new[1], policy = policy, owner=owner, policies_full=StructArray.(policies_full), converged=converged)
