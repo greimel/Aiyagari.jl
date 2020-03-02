@@ -197,9 +197,7 @@ function solve_bellman!(W_old_own, W_new_own, policy, policies_full, owner, endo
     # rent
     iterate_bellman!(V_rent, W_old_rent, policy[2], policies_full[2], endo, exo, converged[2], aggregate_state, params[2], hh.renter)
     
-    owner .= V_own .> V_rent
-    W_new_own  .= max.(V_own, V_rent)
-    W_new_rent .= max.(V_own, V_rent)
+    update_coupled_values!(W_new_own, W_new_rent, V_own, V_rent, owner)
     
     diff_own  = norm(W_old_own  - W_new_own)
     diff_rent = norm(W_old_rent - W_new_rent)
@@ -222,5 +220,12 @@ function solve_bellman!(W_old_own, W_new_own, policy, policies_full, owner, endo
       @warn "reached $maxiter, diff= $diff"
     end
   end
+end
+
+function update_coupled_values!(W_own, W_rent, V_own, V_rent, owner)
+  W_own  .= max.(V_own, V_rent)
+  W_rent .= max.(V_own, V_rent)
+  
+  owner .= V_own .> V_rent  
 end
 
