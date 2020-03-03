@@ -132,15 +132,24 @@ function solve_bellman!(value_old, value_new, policy, policies_full, endo, exo, 
   end
 end
 
-function solve_bellman(endo, exo, aggregate_state, params, hh::Household; maxiter=200, rtol=eps()^0.4)
-  value_old = zeros(length(endo), length(exo))
-  value_new = zeros(size(value_old))
+function initialize_values_policies(endo, exo, aggregate_state, params, hh::Household)
+  container_size = (length(endo), length(exo))
+
+  value_old = zeros(container_size)
+  value_new = zeros(container_size)
   
   @unpack proto_pol, proto_pol_full = proto_policy(endo, exo, value_new, aggregate_state, params, hh)
   
-  policy = fill(proto_pol, size(value_old))
-  policies_full = fill(proto_pol_full, size(value_old))
-  converged = trues(size(value_old))
+  policy = fill(proto_pol, container_size)
+  policies_full = fill(proto_pol_full, container_size)
+  converged = trues(container_size)
+  
+  (value_old=value_old, value_new=value_new, policy=policy, policies_full=policies_full, policy_hh=policy_hh, converged=converged)
+end
+
+function solve_bellman(endo, exo, aggregate_state, params, hh::Household; maxiter=200, rtol=eps()^0.4)
+  containers = initialize_values_policies(endo, exo, aggregate_state, params, hh)
+  @unpack value_old, value_new, policy, policies_full, policy_hh, converged = out
   
   solve_bellman!(value_old, value_new, policy, policies_full, endo, exo, converged, aggregate_state, params, hh::Household; maxiter=maxiter, rtol=rtol)
     
