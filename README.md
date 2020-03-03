@@ -8,16 +8,12 @@ This package is not registered. For installing the package, type
 
 ```julia
 ] add https://gitlab.com/greimel/Aiyagari.jl
-
-using Aiyagari
-
 ```
+in the julia REPL. See the documentation for how to solve macroeconomic models using the package.
 
-in the julia REPL. For running the tests locally, you must use a patched version of `Literate.jl`,
+For running the tests locally, run
 
 ```julia
-] dev https://gitlab.com/greimel/Literate.jl
-
 ] test Aiyagari
 ```
 
