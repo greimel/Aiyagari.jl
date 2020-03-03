@@ -115,7 +115,8 @@ function excess_demand(r, p, endo, exo, param, hh; maxiter_bellman=200)
 
   out = solve_bellman(endo, exo, agg_state, param, hh, maxiter=300, rtol=√eps())
   
-  @unpack val, policy, policies_full, owner = out
+  @unpack val, policy, policies_full, policy_hh = out
+  owner = policy_hh[1] .== 1
   
   w_next_all = combined_policies(policies_full, owner, :w_next)
   
@@ -134,10 +135,12 @@ endo = EndogenousStateSpace((w=w_grid,))
 param_both = (β = 0.93, θ = 0.9, δ = 0.1, h_thres = 1.2)
 param = [param_both, param_both]
 
-@unpack val, policy, policies_full, owner, a, h, dist = excess_demand(r, p, endo, exo, param, OwnOrRent())
+@unpack val, policy, policies_full, policy_hh, a, h, dist = excess_demand(r, p, endo, exo, param, OwnOrRent())
 
 @show r => a, p => h
- 
+owner = policy_hh[1] .== 1
+value = val[1]
+
 plt_own = plot(w_grid, owner, title="Who owns?") #md
 
 w_next_all = combined_policies(policies_full, owner, :w_next)
@@ -156,13 +159,13 @@ plt_dist = plot(w_grid, dist, title = "stationary distribution") #md
 plot(plt_h, plt_a, plt_w, plt_dist, legend=false) #md
 #- #md
 
-#writedlm(joinpath(PKG_HOME, "test/matrices", "own-rent-value.txt"), val) #src
+#writedlm(joinpath(PKG_HOME, "test/matrices", "own-rent-value.txt"), value) #src
 #writedlm(joinpath(PKG_HOME, "test/matrices", "own-rent-dist.txt"), dist) #src
 
 @testset "own-rent" begin #jl
   value_test = readdlm(joinpath(PKG_HOME, "test/matrices", "own-rent-value.txt")) #jl
   dist_test = readdlm(joinpath(PKG_HOME, "test/matrices", "own-rent-dist.txt")) #jl
-  @test all(val .≈ value_test) #jl
+  @test all(value .≈ value_test) #jl
   @test maximum(abs, dist .- dist_test) < 1e-12 #jl
 end #jl
 

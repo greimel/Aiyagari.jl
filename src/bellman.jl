@@ -155,22 +155,23 @@ end
 ## Special cases for coupled value functions
 ############################################################
 
-function solve_bellman(endo, exo, aggregate_state, params, hh::OwnOrRent; maxiter=200, rtol=eps()^0.4)
+function solve_bellman(endo, exo, aggregate_state, params, chh::CoupledHouseholds; maxiter=200, rtol=eps()^0.4)
   container_size = (length(endo), length(exo))
-  @info "here"
-  hh_vec= [hh.owner, hh.renter]
-  n = length(hh_vec)
+  
+  hh_tup = households(chh)
+  n = length(chh)
   
   V         = [zeros(container_size) for i in 1:n]
   W_old     = [zeros(container_size) for i in 1:n]
   W_new     = [zeros(container_size) for i in 1:n]
   converged = [trues(container_size) for i in 1:n]
-  #owner = zeros(Int, container_size)
-  owner = trues(container_size)
+  
+  policy_hh = [zeros(Int, container_size) for i in 1:n]
+  
     
   # @unpack proto_pol, proto_pol_full
   proto = map(1:n) do i
-    proto_policy(endo, exo, V[1], aggregate_state, params[i], hh_vec[i])
+    proto_policy(endo, exo, V[1], aggregate_state, params[i], hh_tup[i])
   end
     
   proto_pol = [p.proto_pol for p in proto]
@@ -179,21 +180,22 @@ function solve_bellman(endo, exo, aggregate_state, params, hh::OwnOrRent; maxite
   policy = fill.(proto_pol, Ref(container_size))
   policies_full = fill.(proto_pol_full, Ref(container_size))
   
-  solve_bellman!(W_old, W_new, V, policy, policies_full, owner, endo, exo, converged, aggregate_state, params, hh_vec; maxiter=maxiter, rtol=rtol)
+  solve_bellman!(W_old, W_new, V, policy, policies_full, policy_hh, endo, exo, converged, aggregate_state, params, chh; maxiter=maxiter, rtol=rtol)
   
   all(all.(converged)) || @warn "optimization didn't converge at $((1 .- mean.(converged)) .* 100)%"
 
   
-  (val = W_new[1], policy = policy, owner=owner, policies_full=StructArray.(policies_full), converged=converged)
+  (val = W_new, policy = policy, policy_hh=policy_hh, policies_full=StructArray.(policies_full), converged=converged)
 end
 
-function solve_bellman!(W_old::Vector, W_new::Vector, V::Vector, policy::Vector, policies_full::Vector, owner, endo, exo, converged::Vector, aggregate_state, params::Vector, hh_vec::Vector; maxiter=100, rtol = √eps())
+function solve_bellman!(W_old::Vector, W_new::Vector, V::Vector, policy::Vector, policies_full::Vector, policies_hh::Vector, endo, exo, converged::Vector, aggregate_state, params::Vector, chh::CoupledHouseholds; maxiter=100, rtol = √eps())
     
   prog = ProgressThresh(rtol, "Solving Bellman equation")
+
   for i in 1:maxiter
-    iterate_bellman!.(V, W_old, policy, policies_full, Ref(endo), Ref(exo), converged, Ref(aggregate_state), params, hh_vec)
+    iterate_bellman!.(V, W_old, policy, policies_full, Ref(endo), Ref(exo), converged, Ref(aggregate_state), params, households(chh))
     
-    update_coupled_values!(W_new, V, owner)
+    update_coupled_values!(W_new, V, policies_hh)
     
     diff = norm.(W_old .- W_new)
     
@@ -218,12 +220,19 @@ function solve_bellman!(W_old::Vector, W_new::Vector, V::Vector, policy::Vector,
   end
 end
 
-function update_coupled_values!(W, V, owner)
+#function update_coupled_values! end # needs to be provided
+
+function update_coupled_values!(W, V, policies_hh)
   W_own, W_rent = W
   V_own, V_rent = V
-  W_own  .= max.(V_own, V_rent)
-  W_rent .= max.(V_own, V_rent)
+  policies_own, policies_rent = policies_hh
   
-  owner .= V_own .> V_rent  
+  W_own  .= max.(V_own, V_rent)
+  policies_own .= V_own .> V_rent
+  
+  W_rent .= max.(V_own, V_rent)
+  policies_rent .= V_own .> V_rent
+  
+  nothing
 end
 

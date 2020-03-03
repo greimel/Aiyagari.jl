@@ -24,6 +24,8 @@ struct IsState <: HouseState end
 struct NoState <: HouseState end
 
 abstract type Household end
+abstract type CoupledHouseholds end
+
 @with_kw struct Consumer{T} <: Household
   𝔼::T = Unconditional()
 end
@@ -36,12 +38,16 @@ end
 @with_kw struct Renter{T} <: Household
   𝔼::T = Unconditional()
 end
-@with_kw struct OwnOrRent{O<:Owner,R<:Renter} <: Household
+
+𝔼(hh::Household) = hh.𝔼
+
+@with_kw struct OwnOrRent{O<:Owner,R<:Renter} <: CoupledHouseholds
   owner::O = Owner()
   renter::R = Renter()
 end
 
-𝔼(hh::Household) = hh.𝔼
+households(chh::OwnOrRent) = [chh.owner, chh.renter]
+Base.length(chh::CoupledHouseholds) = length(households(chh))
  
 include("bellman.jl")
 include("stationary-distribution.jl")
