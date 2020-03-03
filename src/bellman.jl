@@ -65,7 +65,7 @@ function initialize_values_policies(endo, exo, aggregate_state, params, hh::Hous
   policies_full = fill(proto_pol_full, container_size)
   converged = trues(container_size)
   
-  (value=value, policy=policy, policies_full=policies_full, policy_hh=policy_hh, converged=converged)
+  (value=value, policy=policy, policies_full=policies_full, converged=converged)
 end
 
 function solve_bellman_T!(value, policy, policies_full, endo, exo, converged, aggregate_state, params, hh::Household, t_grid)
@@ -91,8 +91,6 @@ function solve_bellman_T!(value, policy, policies_full, endo, exo, converged, ag
   
   length(converged) == number_conv || @warn "Bellman didn't converge at $(round((1-number_conv / length(converged)) * 100, digits=4))% ($(length(converged) - number_conv) states)"
 end
-
-
 
 # For OLG: solve last period
 function iterate_bellman_last!(value, policy, policies_full, endo, exo, converged, agg_state, params, hh::Household)
@@ -140,7 +138,7 @@ function initialize_values_policies(endo, exo, aggregate_state, params, hh::Hous
   policies_full = fill(proto_pol_full, container_size)
   converged = trues(container_size)
   
-  (value_old=value_old, value_new=value_new, policy=policy, policies_full=policies_full, policy_hh=policy_hh, converged=converged)
+  (value_old=value_old, value_new=value_new, policy=policy, policies_full=policies_full, converged=converged)
 end
 
 function solve_bellman!(value_old, value_new, policy, policies_full, endo, exo, converged, aggregate_state, params, hh::Household; maxiter=100, rtol = √eps())
