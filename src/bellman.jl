@@ -155,7 +155,7 @@ end
 ## Special cases for coupled value functions
 ############################################################
 
-function solve_bellman(endo, exo, aggregate_state, params, chh::CoupledHouseholds; maxiter=200, rtol=eps()^0.4)
+function initialize_values_policies(endo, exo, aggregate_state, params, chh::CoupledHouseholds)
   container_size = (length(endo), length(exo))
   
   hh_tup = households(chh)
@@ -180,10 +180,14 @@ function solve_bellman(endo, exo, aggregate_state, params, chh::CoupledHousehold
   policy = fill.(proto_pol, Ref(container_size))
   policies_full = fill.(proto_pol_full, Ref(container_size))
   
-  solve_bellman!(W_old, W_new, V, policy, policies_full, policy_hh, endo, exo, converged, aggregate_state, params, chh; maxiter=maxiter, rtol=rtol)
-  
-  all(all.(converged)) || @warn "optimization didn't converge at $((1 .- mean.(converged)) .* 100)%"
+  (W_old=W_old, W_new=W_new, V=V, policy=policy, policies_full=policies_full, policy_hh=policy_hh, converged=converged)
+end
 
+function solve_bellman(endo, exo, aggregate_state, params, chh::CoupledHouseholds; maxiter=200, rtol=eps()^0.4)
+  containers = initialize_values_policies(endo, exo, aggregate_state, params, chh)
+  @unpack W_old, W_new, V, policy, policies_full, policy_hh, converged = out
+  
+  solve_bellman!(W_old, W_new, V, policy, policies_full, policy_hh, endo, exo, converged, aggregate_state, params, chh; maxiter=maxiter, rtol=rtol)
   
   (val = W_new, policy = policy, policy_hh=policy_hh, policies_full=StructArray.(policies_full), converged=converged)
 end
@@ -218,6 +222,9 @@ function solve_bellman!(W_old::Vector, W_new::Vector, V::Vector, policy::Vector,
       @warn "reached $maxiter, diff= $relative_error"
     end
   end
+  
+  all(all.(converged)) || @warn "optimization didn't converge at $((1 .- mean.(converged)) .* 100)%"
+
 end
 
 #function update_coupled_values! end # needs to be provided
