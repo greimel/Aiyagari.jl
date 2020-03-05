@@ -141,7 +141,7 @@ function initialize_values_policies(endo, exo, aggregate_state, params, hh::Hous
   (value_old=value_old, value_new=value_new, policy=policy, policies_full=policies_full, converged=converged)
 end
 
-function solve_bellman!(value_old, value_new, policy, policies_full, endo, exo, converged, aggregate_state, params, hh::Household; maxiter=100, rtol = √eps())
+function solve_bellman!(value_old, value_new, policy, policies_full, endo, exo, converged, aggregate_state, params, hh::Household; maxiter, rtol)
   
   prog = ProgressThresh(rtol, "Bellman: VFI")
   for i in 1:maxiter
@@ -208,7 +208,7 @@ function initialize_values_policies(endo, exo, aggregate_state, params, chh::Cou
   (W_old=W_old, W_new=W_new, V=V, policy=policy, policies_full=policies_full, policy_hh=policy_hh, converged=converged)
 end
 
-function solve_bellman!(W_old::Vector, W_new::Vector, V::Vector, policy::Vector, policies_full::Vector, policies_hh::Vector, endo, exo, converged::Vector, aggregate_state, params::Vector, chh::CoupledHouseholds; maxiter=100, rtol = √eps())
+function solve_bellman!(W_old::Vector, W_new::Vector, V::Vector, policy::Vector, policies_full::Vector, policies_hh::Vector, endo, exo, converged::Vector, aggregate_state, params::Vector, chh::CoupledHouseholds; maxiter, rtol)
     
   prog = ProgressThresh(rtol, "Solving Bellman equation")
 
