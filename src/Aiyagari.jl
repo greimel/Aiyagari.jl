@@ -2,7 +2,7 @@ module Aiyagari
 
 using QuantEcon
 using Interpolations
-using Optim
+#using Optim
 using Parameters
 using LinearAlgebra: norm
 using SparseArrays: sparse

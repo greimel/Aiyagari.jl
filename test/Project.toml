@@ -1,0 +1,10 @@
+[deps]
+Aiyagari = "7b0e4355-eafe-4ce3-ba71-9b57fde9d81c"
+DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
+NLopt = "76087f3c-5699-56af-9a33-bf431cd00edd"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
+QuantEcon = "fcd29c91-0bd7-5a09-975d-7ac3f643a60c"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
